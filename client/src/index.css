@@ -33,7 +33,7 @@ button, .main-map, .button {
 .main-map {
   color: #d4af37;
   font-size: 2em;
-  margin: 20px 0;
+  margin: 20px40;
   padding: 10px 20px;
   background-color: black;
   border: 2px solid #d4af37;
@@ -58,4 +58,88 @@ button, .main-map, .button {
 
 .button:hover, .main-map:hover {
   background-color: #987d25;
+}
+
+
+/* #############################################################
+   #####################    Info Page    #######################
+   #############################################################  */ 
+
+.info-page {
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  padding-bottom: 100px;
+  padding-top: 120px;
+}
+
+.subtitle {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.text {
+  font-size: 18px;
+  margin-top: 0.5rem;
+}
+
+.list {
+  list-style-type: none;
+  margin-left: 2rem;
+  margin-top: 1rem;
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+.list li {
+  margin-bottom: 0.5rem;
+}
+
+
+.header {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding-bottom: 70px;
+  padding-top: 170px;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%); 
+}
+
+.back-button {
+  position: absolute;
+  left: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #d4af37;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.4s ease;
+  width: 80px; 
+  text-align: left;
+}
+
+.back-button:active {
+  transform: scale(0.8);
+  animation: pop-back 1s ease-in-out;
+}
+
+@keyframes pop-back {
+  0% {
+      transform: scale(0.8);
+  }
+}
+
+.back-button:hover {
+  color: #877024;
+  transform: scale(1.1);
 }
