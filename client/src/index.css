@@ -19,27 +19,30 @@ h1 {
   font-size: 3em;
 }
 
-button, .main-map, .button {
+
+
+/* #############################################################
+   #####################    Main Page    #######################
+   #############################################################  */ 
+
+.homepage {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px
+}
+
+button, .button {
   background: None;
   font-family: Courier, monospace, sans-serif;
   color: #d4af37;
   text-decoration: none;
-  display: inline-block;
   padding: 10px;
   cursor: pointer;
   text-align: center;
 }
 
-.main-map {
-  color: #d4af37;
-  font-size: 2em;
-  margin: 20px40;
-  padding: 10px 20px;
-  background-color: black;
-  border: 2px solid #d4af37;
-  cursor: pointer;
-  border-radius: 5px;
-}
 
 /* Specific styles for How to Play Link */
 .button {
@@ -49,17 +52,18 @@ button, .main-map, .button {
   font-size: 1.2em;
   border: 2px solid #d4af37;
   border-radius: 5px;
-  position: absolute;
   bottom: 15%;
-  left: 50%;
-  transform: translateX(-50%);
   cursor: pointer;
+  width: fit-content;
 }
 
-.button:hover, .main-map:hover {
+.button:hover {
   background-color: #987d25;
 }
 
+.button:active {
+  transform: translateY(4px);
+}
 
 /* #############################################################
    #####################    Info Page    #######################

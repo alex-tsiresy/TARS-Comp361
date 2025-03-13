@@ -7,7 +7,7 @@ function InfoPage() {
         <div className="info-page">
             <div className="header">
                 <button className="back-button" onClick={() => navigate("/")}>⏴ Back</button>
-                <h1 className="title">🚀 Mars Rover Control Information</h1>
+                <h1 className="title">🚀 Mars Rovers Controls & Information</h1>
             </div>
 
             <div className="info-card">
