@@ -1,0 +1,317 @@
+/* MarsRoverUI.css */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.mars-rover-ui {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  background-color: #000;
+  color: #ffcb46;
+  font-family: monospace;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Left Panel - Terrain View */
+.left-panel {
+  flex: 1 1 75%;
+  position: relative;
+  overflow: hidden;
+  border-right: 2px solid #ffcb46;
+}
+
+.terrain-view {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.area-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  width: 100%;
+  pointer-events: none;
+}
+
+.area-label {
+  background-color: #ffcb46;
+  color: #000;
+  padding: 5px 10px;
+  margin-bottom: 10px;
+  font-weight: bold;
+  border-radius: 0;
+  width: 180px;
+}
+
+.perseverance {
+  position: absolute;
+  top: 35px;
+  left: 15px;
+  text-align: center;
+}
+
+.curiosity {
+  position: absolute;
+  top: 85px;
+  left: 15px;
+  text-align: center;
+}
+
+/* Control Panel */
+.control-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  align-items: flex-start;
+}
+
+.control-buttons {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+.control-buttons button {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 10px;
+  background-color: #ffcb46;
+  color: #000;
+  border: none;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.add-robot-btn {
+  background-color: #ff4500;
+  color: white;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+  width: 60px;
+  height: 60px;
+  text-align: center;
+}
+
+.robot-icon-container {
+  font-size: 24px;
+  margin-bottom: 2px;
+}
+
+.add-robot-label {
+  font-family: monospace;
+  font-weight: bold;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+/* Right Panel - Robot Details */
+.right-panel {
+  flex: 0 0 25%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: #000;
+  border-left: 2px solid #ffcb46;
+  max-width: 400px;
+  overflow-y: auto;
+}
+
+.robot-details {
+  margin-bottom: 0;
+  padding: 15px;
+  border-bottom: 1px solid #ffcb46;
+}
+
+.robot-details h2 {
+  border-bottom: 1px solid #ffcb46;
+  padding-bottom: 5px;
+  margin-top: 0;
+  text-align: center;
+  color: #ffcb46;
+}
+
+.robot-details p {
+  margin: 8px 0;
+  font-family: monospace;
+  font-size: 14px;
+  color: #ffcb46;
+}
+
+.connection-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #000;
+  border-bottom: 1px solid #ffcb46;
+}
+
+.download-speed {
+  background-color: #ffcb46;
+  color: #000;
+  padding: 5px;
+  font-size: 0.8em;
+}
+
+.task-control {
+  padding: 15px;
+  border-bottom: 1px solid #ffcb46;
+}
+
+.dropdown {
+  margin-bottom: 15px;
+}
+
+.dropdown-toggle {
+  width: 100%;
+  padding: 10px;
+  background-color: #ffcb46;
+  color: #000;
+  border: none;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  border-radius: 0;
+}
+
+.dropdown-arrow {
+  font-size: 0.8em;
+}
+
+.submit-button {
+  width: 200px;
+  padding: 10px;
+  background-color: #ffcb46;
+  color: #000;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  align-self: center;
+  border-radius: 0;
+}
+
+/* View Sections */
+.view-section {
+  padding: 0;
+}
+
+.view-section h3 {
+  margin: 0;
+  padding: 10px 15px;
+  border-bottom: 1px solid #ffcb46;
+  color: #ffcb46;
+  text-align: right;
+  font-size: 14px;
+}
+
+.first-person-view, .radar-view {
+  height: 150px;
+  background-color: #000;
+  border-bottom: 1px solid #ffcb46;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.first-person-view {
+  position: relative;
+}
+
+.terrain-line {
+  position: absolute;
+  width: 100%;
+  height: 50px;
+  background: linear-gradient(to top, #ffcb46, transparent);
+  bottom: 0;
+  opacity: 0.3;
+}
+
+/* Radar View */
+.radar-view {
+  position: relative;
+}
+
+.radar-circles {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.radar-circle {
+  position: absolute;
+  border: 1px solid #ffcb46;
+  border-radius: 50%;
+}
+
+.radar-circle.c1 { width: 20px; height: 20px; top: 40px; left: 40px; }
+.radar-circle.c2 { width: 40px; height: 40px; top: 30px; left: 30px; }
+.radar-circle.c3 { width: 60px; height: 60px; top: 20px; left: 20px; }
+.radar-circle.c4 { width: 80px; height: 80px; top: 10px; left: 10px; }
+.radar-circle.c5 { width: 100px; height: 100px; top: 0; left: 0; }
+
+.radar-center {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: #ffcb46;
+  border-radius: 50%;
+  top: 47px;
+  left: 47px;
+}
+
+/* Cross lines */
+.radar-circles::before,
+.radar-circles::after {
+  content: '';
+  position: absolute;
+  background-color: #ffcb46;
+  z-index: 1;
+}
+
+.radar-circles::before {
+  width: 100px;
+  height: 1px;
+  top: 50px;
+  left: 0;
+}
+
+.radar-circles::after {
+  width: 1px;
+  height: 100px;
+  top: 0;
+  left: 50px;
+} 
