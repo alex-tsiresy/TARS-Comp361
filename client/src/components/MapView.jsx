@@ -5,6 +5,7 @@ const MapView = ({ onRobotSelected }) => {
   const mapRef = useRef(null);
   const [robots, setRobots] = useState([]);
   const [mapDimensions, setMapDimensions] = useState({ width: 0, height: 0 });
+  const [selectedRobotId, setSelectedRobotId] = useState(null);
   
   // Set up map dimensions on mount
   useEffect(() => {
@@ -34,12 +35,29 @@ const MapView = ({ onRobotSelected }) => {
       setRobots(prev => prev.map(r => r.id === robot.id ? robot : r));
     };
     
+    // Listen for robot selection events
+    const handleRobotSelected = (event) => {
+      const { robot } = event.detail;
+      console.log('MapView received robot selection event:', robot?.id);
+      
+      // Update internal selection state
+      setSelectedRobotId(robot?.id || null);
+      
+      // Update all robots to reflect selection state
+      setRobots(prev => prev.map(r => ({
+        ...r,
+        selected: r.id === (robot?.id || null)
+      })));
+    };
+    
     window.addEventListener('robotAdded', handleRobotAdded);
     window.addEventListener('robotUpdated', handleRobotUpdated);
+    window.addEventListener('robotSelected', handleRobotSelected);
     
     return () => {
       window.removeEventListener('robotAdded', handleRobotAdded);
       window.removeEventListener('robotUpdated', handleRobotUpdated);
+      window.removeEventListener('robotSelected', handleRobotSelected);
     };
   }, []);
 
@@ -62,9 +80,21 @@ const MapView = ({ onRobotSelected }) => {
 
   // Handle robot marker click
   const handleRobotClick = (robot) => {
+    console.log('Robot marker clicked:', robot.id);
+    
+    // Update internal selection state
+    setSelectedRobotId(robot.id);
+    
+    // Propagate selection to parent component
     if (onRobotSelected) {
       onRobotSelected(robot);
     }
+    
+    // Dispatch a robot selection event for other components
+    const selectEvent = new CustomEvent('robotSelected', {
+      detail: { robot: robot }
+    });
+    window.dispatchEvent(selectEvent);
   };
 
   // For adding a new robot at a specific map position
@@ -83,6 +113,8 @@ const MapView = ({ onRobotSelected }) => {
     const terrainSize = 2000;
     const terrainX = (clickXPercent * terrainSize) - (terrainSize / 2);
     const terrainZ = ((1 - clickYPercent) * terrainSize) - (terrainSize / 2);
+    
+    console.log(`Map clicked at (${clickX}, ${clickY}), terrain coordinates: (${terrainX}, ${terrainZ})`);
     
     // Dispatch a custom event to request adding a robot
     const addRobotEvent = new CustomEvent('addRobotRequest', {
@@ -104,11 +136,12 @@ const MapView = ({ onRobotSelected }) => {
         {/* Plot robot markers */}
         {robots.map(robot => {
           const { x, y } = terrainToMapCoords(robot.position.x, robot.position.z);
+          const isSelected = robot.id === selectedRobotId;
           
           return (
             <div key={robot.id} className="robot-container">
               <div 
-                className={`robot-marker ${robot.selected ? 'selected' : ''}`}
+                className={`robot-marker ${isSelected ? 'selected' : ''}`}
                 style={{ 
                   left: `${x}px`, 
                   top: `${y}px`,
@@ -117,19 +150,8 @@ const MapView = ({ onRobotSelected }) => {
                   e.stopPropagation();
                   handleRobotClick(robot);
                 }}
-                title={`Robot ${robot.id.substring(0, 8)}`}
+                title={`Robot ${robot.id.substring(0, 8)}${isSelected ? ' (Selected)' : ''}`}
               />
-              
-              {robot.direction && (
-                <div 
-                  className={`direction-indicator ${robot.selected ? 'selected' : ''}`}
-                  style={{
-                    left: `${x}px`,
-                    top: `${y}px`,
-                    transform: `rotate(${Math.atan2(robot.direction.z, robot.direction.x) * 180 / Math.PI}deg)`
-                  }}
-                />
-              )}
             </div>
           );
         })}

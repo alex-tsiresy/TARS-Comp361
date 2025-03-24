@@ -43,7 +43,20 @@ class TerrainManager {
   handleAddRobotRequest(event) {
     const { position } = event.detail;
     if (this.renderer) {
-      this.renderer.addRobotAtPosition(position.x, position.z);
+      console.log(`TerrainManager: Adding robot at position (${position.x}, ${position.z})`);
+      const robotData = this.renderer.addRobotAtPosition(position.x, position.z);
+      console.log('Robot added, data:', robotData);
+      
+      // Ensure robot selection is properly propagated to UI
+      if (robotData) {
+        console.log('TerrainManager: Broadcasting robot selection event for:', robotData.id);
+        
+        // Dispatch a single robot selection event
+        const selectEvent = new CustomEvent('robotSelected', {
+          detail: { robot: { ...robotData } }
+        });
+        window.dispatchEvent(selectEvent);
+      }
     }
   }
   

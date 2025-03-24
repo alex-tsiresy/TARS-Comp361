@@ -30,64 +30,15 @@ class RobotManager {
     this.robotCamera.fov = 75; // Wide FOV for better visibility
     this.robotCamera.updateProjectionMatrix();
     
-    // Add a camera helper for debugging (visible in the main view)
-    this.robotCameraHelper = new THREE.CameraHelper(this.robotCamera);
-    this.scene.add(this.robotCameraHelper);
-    this.robotCameraHelper.visible = false; // Hide by default
-    
-    // Add a visible element to robot's view so we know it's working
-    this.createRobotViewHelper();
-    
     // Create a raycaster for robot selection
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
   }
   
-  // Create a helper object that will be visible in the robot's view
-  createRobotViewHelper() {
-    // Create a small wireframe sphere that will follow the robot
-    const geometry = new THREE.SphereGeometry(2, 8, 8);
-    const material = new THREE.MeshBasicMaterial({ 
-      color: 0xffff00, 
-      wireframe: true 
-    });
-    this.viewHelper = new THREE.Mesh(geometry, material);
-    this.scene.add(this.viewHelper);
-    
-    // Create a grid helper for orientation
-    this.gridHelper = new THREE.GridHelper(100, 10, 0xff0000, 0x444444);
-    this.scene.add(this.gridHelper);
-  }
-  
-  // Update the view helper positions
+  // Update the view helper positions - simplify by removing helper objects
   updateViewHelpers() {
-    if (this.selectedRobotId && this.robots[this.selectedRobotId]) {
-      const robot = this.robots[this.selectedRobotId];
-      const pos = robot.position;
-      const dir = robot.direction;
-      
-      console.log(`Updating view helpers for robot at (${pos.x}, ${pos.y}, ${pos.z})`);
-      
-      // Position the view helper in front of the robot
-      if (this.viewHelper) {
-        this.viewHelper.position.set(
-          pos.x + dir.x * 15, 
-          pos.y + 2, 
-          pos.z + dir.z * 15
-        );
-        this.viewHelper.visible = true;
-      }
-      
-      // Position the grid helper under the robot
-      if (this.gridHelper) {
-        this.gridHelper.position.set(pos.x, pos.y - 5, pos.z);
-        this.gridHelper.visible = true;
-      }
-    } else {
-      // No robot selected, hide helpers
-      if (this.viewHelper) this.viewHelper.visible = false;
-      if (this.gridHelper) this.gridHelper.visible = false;
-    }
+    // This method is kept empty but we keep it to avoid breaking existing code
+    // that might call this method
   }
   
   // Create a new robot
@@ -115,26 +66,15 @@ class RobotManager {
     // Create robot mesh - use a combined geometry for better visibility
     const robotGroup = new THREE.Group();
     
-    // Main body - larger sphere
-    const bodyGeometry = new THREE.SphereGeometry(8, 16, 16);
+    // Main body - larger sphere (increased size since we're not using the direction cone)
+    const bodyGeometry = new THREE.SphereGeometry(10, 20, 20);
     const bodyMesh = new THREE.Mesh(bodyGeometry, this.robotMaterial);
     bodyMesh.castShadow = true;
     robotGroup.add(bodyMesh);
     
-    // Direction indicator - cone pointing in travel direction
-    const coneGeometry = new THREE.ConeGeometry(4, 12, 8);
-    coneGeometry.rotateX(-Math.PI / 2); // Orient to point forward (z-axis)
-    const coneMesh = new THREE.Mesh(coneGeometry, this.robotMaterial);
-    coneMesh.position.set(0, 0, 10); // Position in front of the body
-    coneMesh.castShadow = true;
-    robotGroup.add(coneMesh);
-    
-    // Antenna - helps with visibility from above
-    const antennaGeometry = new THREE.CylinderGeometry(0.5, 0.5, 15, 8);
-    const antennaMesh = new THREE.Mesh(antennaGeometry, this.robotMaterial);
-    antennaMesh.position.set(0, 10, 0); // Position on top
-    antennaMesh.castShadow = true;
-    robotGroup.add(antennaMesh);
+    // Direction indicator removed - we no longer need the visual cone
+    // The robot still has a direction vector internally for movement,
+    // but it's not visually represented anymore
     
     // Position the entire group
     robotGroup.position.set(position.x, position.y, position.z);
@@ -197,11 +137,14 @@ class RobotManager {
     // Deselect previous robot
     if (this.selectedRobotId && this.robots[this.selectedRobotId]) {
       const prevRobot = this.robots[this.selectedRobotId];
+      
+      // Since we're using a simpler model now, just change the material of the children
       prevRobot.mesh.children.forEach(child => {
         if (child instanceof THREE.Mesh) {
           child.material = this.robotMaterial;
         }
       });
+      
       prevRobot.selected = false;
       console.log(`Deselected previous robot: ${this.selectedRobotId}`);
     }
@@ -211,11 +154,14 @@ class RobotManager {
     // Select new robot
     if (robotId && this.robots[robotId]) {
       const robot = this.robots[robotId];
+      
+      // Since we're using a simpler model now, just change the material of the children
       robot.mesh.children.forEach(child => {
         if (child instanceof THREE.Mesh) {
           child.material = this.selectedRobotMaterial;
         }
       });
+      
       robot.selected = true;
       
       // Position the robot camera
@@ -227,12 +173,6 @@ class RobotManager {
         pos.z + robot.direction.z * 10
       );
       
-      // Make camera helper visible for debugging
-      this.robotCameraHelper.visible = true;
-      
-      // Ensure view helpers are properly positioned
-      this.updateViewHelpers();
-      
       console.log(`Selected robot ${robotId.substring(0, 8)} at position:`, pos);
       
       // Dispatch event for UI
@@ -240,12 +180,6 @@ class RobotManager {
       window.dispatchEvent(event);
     } else {
       // No robot selected
-      this.robotCameraHelper.visible = false;
-      
-      // Hide view helpers
-      if (this.viewHelper) this.viewHelper.visible = false;
-      if (this.gridHelper) this.gridHelper.visible = false;
-      
       console.log('No robot selected');
       
       // Dispatch event for UI
@@ -346,9 +280,13 @@ class RobotManager {
       // Update mesh position
       robot.mesh.position.set(clampedX, actualHeight + 5, clampedZ);
       
-      // Also rotate the robot to face the direction of movement
+      // We still track the rotation angle for camera purposes
+      // but we no longer need to visually rotate the robot mesh since
+      // we removed the direction cone
       const rotationAngle = Math.atan2(robot.direction.z, robot.direction.x);
-      robot.mesh.rotation.y = rotationAngle;
+      
+      // Store the rotation angle but don't apply it to the mesh
+      robot.rotationAngle = rotationAngle;
       
       // Notify about robot position update, but throttle to avoid too many events
       const lastUpdate = this.lastUpdateTime[robot.id] || 0;
@@ -376,12 +314,6 @@ class RobotManager {
         pos.y + 2,
         pos.z + robot.direction.z * 10
       );
-      
-      // Update camera helper for debugging
-      this.robotCameraHelper.update();
-      
-      // Update the view helpers that will be visible in the robot views
-      this.updateViewHelpers();
     }
   }
   

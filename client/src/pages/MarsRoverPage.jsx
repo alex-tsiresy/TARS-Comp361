@@ -10,10 +10,12 @@ const MarsRoverPage = () => {
   const radarViewRef = useRef(null);
   const [renderer, setRenderer] = useState(null);
   
-  // Handle robot selection
+  // Handle robot selection from MapView
   const handleRobotSelected = (robot) => {
     console.log('Robot selected in map view:', robot?.id);
-    setSelectedRobot(robot);
+    
+    // Update the local state with a deep copy
+    setSelectedRobot(robot ? {...robot} : null);
     
     // If we have a renderer, tell it to select this robot
     if (renderer && robot) {
@@ -24,12 +26,13 @@ const MarsRoverPage = () => {
       if (rendererRobot && rendererRobot.id === robot.id) {
         console.log('Robot already selected in renderer');
       } else {
+        console.log('Selecting robot in renderer');
         renderer.robotManager.selectRobot(robot.id);
         
         // Force setup of renderers if needed
         if (firstPersonViewRef.current && radarViewRef.current) {
+          console.log('Setting up renderers for selected robot');
           setTimeout(() => {
-            console.log('Re-setting up renderers after robot selection');
             renderer.setupRobotViewRenderer(firstPersonViewRef.current);
             renderer.setupRadarRenderer(radarViewRef.current);
           }, 50);
@@ -38,6 +41,15 @@ const MarsRoverPage = () => {
     } else if (renderer && !robot) {
       console.log('Clearing robot selection in renderer');
       renderer.robotManager.selectRobot(null);
+    }
+    
+    // Broadcast the selection to other components
+    if (robot) {
+      console.log('Broadcasting robot selection from MapView handler');
+      const event = new CustomEvent('robotSelected', {
+        detail: { robot: {...robot} }
+      });
+      window.dispatchEvent(event);
     }
   };
   
@@ -60,19 +72,80 @@ const MarsRoverPage = () => {
   useEffect(() => {
     const handleRobotUpdated = (event) => {
       const { robot } = event.detail;
-      if (robot && selectedRobot && robot.id === selectedRobot.id) {
-        // Log the height value to debug
-        console.log('Robot updated, height:', robot.height);
-        setSelectedRobot(robot);
+      if (!robot) {
+        console.warn('Received robotUpdated event with no robot data');
+        return;
+      }
+      
+      if (selectedRobot && robot.id === selectedRobot.id) {
+        console.log(`Robot ${robot.id} updated, height: ${robot.height}, updating state`);
+        
+        // Make a deep copy to ensure React sees it as a state change
+        setSelectedRobot(currentRobot => {
+          // Only update if data has actually changed
+          if (JSON.stringify(currentRobot) !== JSON.stringify(robot)) {
+            return { ...robot };
+          }
+          return currentRobot;
+        });
       }
     };
     
+    console.log('Adding robotUpdated event listener');
     window.addEventListener('robotUpdated', handleRobotUpdated);
     
     return () => {
+      console.log('Removing robotUpdated event listener');
       window.removeEventListener('robotUpdated', handleRobotUpdated);
     };
   }, [selectedRobot]);
+  
+  // Listen for robot selection events (including from TerrainManager)
+  useEffect(() => {
+    const handleRobotSelected = (event) => {
+      const { robot } = event.detail;
+      console.log('Robot selected event received in MarsRoverPage:', robot?.id);
+      
+      if (!robot) {
+        console.log('Clearing selected robot');
+        setSelectedRobot(null);
+        return;
+      }
+      
+      console.log('Setting selected robot state to:', robot);
+      // Create a complete copy of the robot object to avoid any reference issues
+      setSelectedRobot(prevRobot => {
+        // If we already have this robot selected with the same data, avoid re-render
+        if (prevRobot?.id === robot.id && 
+            JSON.stringify(prevRobot) === JSON.stringify(robot)) {
+          console.log('Robot already selected with same data, avoiding re-render');
+          return prevRobot;
+        }
+        return { ...robot };
+      });
+      
+      // If the robot exists and the renderer exists, ensure it's selected in the renderer too
+      if (robot && renderer) {
+        console.log(`Ensuring robot ${robot.id} is selected in renderer`);
+        renderer.robotManager.selectRobot(robot.id);
+        
+        // Force setup of views if needed
+        if (firstPersonViewRef.current && radarViewRef.current) {
+          console.log('Setting up view renderers for selected robot');
+          renderer.setupRobotViewRenderer(firstPersonViewRef.current);
+          renderer.setupRadarRenderer(radarViewRef.current);
+        }
+      }
+    };
+    
+    console.log('Adding robotSelected event listener in MarsRoverPage');
+    window.addEventListener('robotSelected', handleRobotSelected);
+    
+    return () => {
+      console.log('Removing robotSelected event listener in MarsRoverPage');
+      window.removeEventListener('robotSelected', handleRobotSelected);
+    };
+  }, [renderer]);
   
   // Set up robot view renderers
   useEffect(() => {
@@ -125,6 +198,11 @@ const MarsRoverPage = () => {
       setTaskInput('');
     }
   };
+  
+  // Log selected robot state whenever it changes
+  useEffect(() => {
+    console.log('Selected robot state updated:', selectedRobot);
+  }, [selectedRobot]);
   
   return (
     <div className="mars-rover-page">
@@ -181,20 +259,6 @@ const MarsRoverPage = () => {
                       'N/A'
                     }
                   </div>
-                  
-                  {/* Fallback visual indicator */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    width: '20px',
-                    height: '20px',
-                    backgroundColor: 'yellow',
-                    borderRadius: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 5,
-                    boxShadow: '0 0 10px 5px rgba(255,255,0,0.5)'
-                  }} />
                 </div>
               </div>
               
@@ -225,19 +289,6 @@ const MarsRoverPage = () => {
                       `Pos: ${selectedRobot.coordinates.x.toFixed(0)}, ${selectedRobot.coordinates.z.toFixed(0)}` : 
                       'N/A'}
                   </div>
-                  
-                  {/* Fallback visual indicator */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    width: '30px',
-                    height: '30px',
-                    border: '2px solid red',
-                    borderRadius: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 5
-                  }} />
                 </div>
               </div>
             </div>
