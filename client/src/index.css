@@ -1,18 +1,39 @@
-body {
+:root {
   margin: 0;
   padding: 0;
-  background-size: contain;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
   background-color: black;
+  color: #d4af37;
+  font-family: Courier, monospace, sans-serif;
+  overflow-x: hidden;
+}
+
+body {
+  background-size: contain;
   background-position: top;
   background-repeat: no-repeat;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  color: #d4af37;
   text-align: center;
-  font-family: Courier, monospace, sans-serif;
+}
+
+/* Remove fixed width/height constraints for app containers */
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 h1 {
@@ -38,7 +59,8 @@ h1 {
   width: 80vh;
   height: 80vh;
   position: relative; 
-  overflow: hidden; 
+  overflow: hidden;
+  margin: auto; /* Center the homepage */
 }
 
 .homepage::before {

@@ -1,6 +1,6 @@
 // TerrainExplorerComponent.js
 import React, { useRef, useEffect } from 'react';
-import { TerrainExplorer } from './TerrainExplorer'; // path to your class
+import { TerrainExplorer } from '../utils/TerrainExplorer'; // Updated path to the class
 
 const TerrainExplorerComponent = () => {
   const containerRef = useRef(null);

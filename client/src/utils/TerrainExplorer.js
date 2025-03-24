@@ -1,71 +1,73 @@
 import * as THREE from 'three';
+import CameraController from './CameraController';
+import RobotManager from './RobotManager';
+import RobotViewManager from './RobotViewManager';
+import { InputHandler } from './InputHandler';
 
 class TerrainExplorer {
   constructor(container) {
-    //initiate the scene object
+    // Core properties
+    this.container = container;
+    this.heightOffset = 2.0; // height above terrain
+    
+    // Initialize scene
+    this.initScene();
+    
+    // Initialize managers
+    this.cameraController = new CameraController(this.scene, this.camera, this.container);
+    this.robotManager = new RobotManager(this.scene);
+    this.robotViewManager = new RobotViewManager(this.scene, this.renderer, this.robotManager);
+    this.inputHandler = new InputHandler(
+      this.container, 
+      this.camera,
+      this.renderer.domElement,
+      this.handleMovement.bind(this)
+    );
+    
+    // Initialize terrain
+    this.initTerrain();
+    
+    // Start animation loop
+    this.animate();
+  }
+
+  initScene() {
+    // Create scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x222222);
 
-    //setup cam
+    // Setup camera
     this.camera = new THREE.PerspectiveCamera(
       75, 
-      window.innerWidth / window.innerHeight, 
+      this.container.clientWidth / this.container.clientHeight, 
       0.1, 
       10000
     );
     this.camera.position.set(0, 50, 0);
 
-    //setup renderer
+    // Setup renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-    container.appendChild(this.renderer.domElement);
-
+    
+    this.container.appendChild(this.renderer.domElement);
+    
+    // Setup lights
     this.setupLights();
-
-    //movement controls
-    this.moveSpeed = 2.0;
-    this.rotateSpeed = 0.03;
-    this.keys = {
-      w: false,
-      a: false,
-      s: false,
-      d: false,
-      ArrowUp: false,
-      ArrowDown: false,
-      ArrowLeft: false,
-      ArrowRight: false
-    };
-
-    //camera position
+    
+    // Setup position tracking
     this.position = new THREE.Vector3(0, 50, 0);
     this.direction = new THREE.Vector3(0, 0, -1);
-    this.heightOffset = 2.0; //height above terrain
-
-    //terrain data
-    this.terrainMesh = null;
-    this.heightCanvas = document.createElement('canvas');
-    this.heightContext = this.heightCanvas.getContext('2d');
-    this.heightmapData = null;
-
-    this.isPointerLocked = false;
-    this.euler = new THREE.Euler(0, 0, 0, 'YXZ');
-    this.PI_2 = Math.PI / 2;
-    this.mouseSpeed = 0.002;
-
-    //event listeners
-    this.setupEventListeners();
-
-    this.init();
+    
+    // Setup resizing
+    window.addEventListener('resize', this.handleResize.bind(this));
   }
 
   setupLights() {
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
     this.scene.add(ambientLight);
 
-    //setup the light, i tried to make it look like the sun
     const directionalLight = new THREE.DirectionalLight("white", 1);
     directionalLight.castShadow = true;
     directionalLight.position.set(1000, 1000, 0);
@@ -82,86 +84,31 @@ class TerrainExplorer {
     this.scene.add(directionalLight);
   }
 
-  setupEventListeners() {
-    //for control
-    window.addEventListener('keydown', (e) => {
-      if (this.keys.hasOwnProperty(e.key.toLowerCase())) {
-        this.keys[e.key.toLowerCase()] = true;
-      }
-      if (this.keys.hasOwnProperty(e.code)) {
-        this.keys[e.code] = true;
-      }
-    });
-
-    window.addEventListener('keyup', (e) => {
-      if (this.keys.hasOwnProperty(e.key.toLowerCase())) {
-        this.keys[e.key.toLowerCase()] = false;
-      }
-      if (this.keys.hasOwnProperty(e.code)) {
-        this.keys[e.code] = false;
-      }
-    });
-
-    //for the mouse
-    this.renderer.domElement.addEventListener('click', () => {
-      if (!this.isPointerLocked) {
-        this.renderer.domElement.requestPointerLock();
-      }
-    });
-
-    document.addEventListener('pointerlockchange', () => {
-      this.isPointerLocked = (document.pointerLockElement === this.renderer.domElement);
-    });
-
-    document.addEventListener('mousemove', (event) => {
-      if (this.isPointerLocked) {
-        const movementX = event.movementX || 0;
-        const movementY = event.movementY || 0;
-
-        this.euler.y -= movementX * this.mouseSpeed;
-        this.euler.x -= movementY * this.mouseSpeed;
-
-        //clamp vertical rotation
-        this.euler.x = Math.max(-this.PI_2 + 0.1, Math.min(this.PI_2 - 0.1, this.euler.x));
-
-        //update camera rotation
-        this.camera.quaternion.setFromEuler(this.euler);
-
-        //update direction vector for movement
-        this.direction.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
-      }
-    });
-
-    window.addEventListener('resize', () => {
-      this.camera.aspect = window.innerWidth / window.innerHeight;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-  }
-
-  init() {
-    //load terrain
+  initTerrain() {
+    // Initialize terrain data
+    this.terrainMesh = null;
+    this.heightCanvas = document.createElement('canvas');
+    this.heightContext = this.heightCanvas.getContext('2d');
+    this.heightmapData = null;
+    
+    // Load terrain
     this.loadTerrain();
-
-    //start animation loop
-    this.animate();
   }
 
   loadTerrain() {
     const textureLoader = new THREE.TextureLoader();
 
-    //load textures
+    // Load textures
     const colorTexture = textureLoader.load('rock01.jpg');
     const normalTexture = textureLoader.load('rock02.jpg');
 
-    //configure texture wrapping
+    // Configure texture wrapping
     colorTexture.wrapS = colorTexture.wrapT = THREE.RepeatWrapping;
     normalTexture.wrapS = normalTexture.wrapT = THREE.RepeatWrapping;
     colorTexture.repeat.set(50, 50);
     normalTexture.repeat.set(50, 50);
 
-    //load heightmap
+    // Load heightmap
     textureLoader.load(
       '/out.png',
       (heightmapTexture) => {
@@ -199,8 +146,7 @@ class TerrainExplorer {
       metalness: 0.0
     });
 
-    //ai generated: tried to come up with shaders that would create an organge color in teh background
-    //but the rock texture closeby
+    // Shader for distance fading
     material.onBeforeCompile = (shader) => {
       shader.fragmentShader = `
         uniform float nearDistance;
@@ -232,8 +178,6 @@ class TerrainExplorer {
     this.scene.add(this.terrainMesh);
   }
 
-
-  //this should allow our avatar to stay a certain distance above the terrain height (urface)
   getHeightAtPosition(x, z) {
     if (!this.heightmapData) return 0;
 
@@ -252,68 +196,98 @@ class TerrainExplorer {
     return height * 300;
   }
 
-  updateMovement() {
+  handleMovement(moveDelta) {
     if (!this.heightmapData) return;
-
-    //calculate movement speed
-    const currentSpeed = this.moveSpeed;
-
-    //get forward and right vectors from camera direction
-    const forward = new THREE.Vector3();
-    forward.copy(this.direction);
-    forward.y = 0; //keep movement on xz plane
-    forward.normalize();
-
-    const right = new THREE.Vector3();
-    right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
-
-    //calculate movement delta
-    const moveDelta = new THREE.Vector3(0, 0, 0);
-
-    //forward/backward
-    if (this.keys.w || this.keys.ArrowUp) {
-      moveDelta.add(forward.multiplyScalar(currentSpeed));
-    }
-    if (this.keys.s || this.keys.ArrowDown) {
-      moveDelta.sub(forward.multiplyScalar(currentSpeed));
-    }
-
-    //left/right strafing
-    if (this.keys.a || this.keys.ArrowLeft) {
-      moveDelta.add(right.multiplyScalar(currentSpeed));
-    }
-    if (this.keys.d || this.keys.ArrowRight) {
-      moveDelta.sub(right.multiplyScalar(currentSpeed));
-    }
-
-    //apply movement
+    
     if (moveDelta.length() > 0) {
-      //calculate new position
+      // Calculate new position
       const newX = this.position.x + moveDelta.x;
       const newZ = this.position.z + moveDelta.z;
 
-      //clamp to terrain bounds
+      // Clamp to terrain bounds
       const halfTerrainSize = 1000;
       const clampedX = Math.max(-halfTerrainSize + 1, Math.min(halfTerrainSize - 1, newX));
       const clampedZ = Math.max(-halfTerrainSize + 1, Math.min(halfTerrainSize - 1, newZ));
 
-      //get terrain height at new position
+      // Get terrain height at new position
       const terrainHeight = this.getHeightAtPosition(clampedX, clampedZ);
 
-      //update position
+      // Update position
       this.position.set(clampedX, terrainHeight + this.heightOffset, clampedZ);
 
-      //update camera position
+      // Update camera position
       this.camera.position.copy(this.position);
+    }
+  }
+
+  handleResize() {
+    if (this.container) {
+      // Update camera and renderer
+      this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+      
+      // Also notify robot view manager
+      this.robotViewManager.handleResize();
     }
   }
 
   animate() {
     requestAnimationFrame(this.animate.bind(this));
+    
+    const now = Date.now();
+    const deltaTime = now - (this.lastTime || now);
+    this.lastTime = now;
 
-    this.updateMovement();
-
+    // Update input and movement
+    this.inputHandler.update();
+    
+    // Update robots
+    this.robotManager.update(deltaTime, this.getHeightAtPosition.bind(this));
+    
+    // Render main view
     this.renderer.render(this.scene, this.camera);
+    
+    // Render robot views
+    this.robotViewManager.renderViews();
+  }
+
+  // Bridge methods for backward compatibility
+  setupRobotViewRenderer(container) {
+    if (this.robotViewManager) {
+      this.robotViewManager.setupRobotViewRenderer(container);
+    }
+  }
+  
+  setupRadarRenderer(container) {
+    if (this.robotViewManager) {
+      this.robotViewManager.setupRadarRenderer(container);
+    }
+  }
+  
+  // Helper method to get the selected robot (for compatibility)
+  getSelectedRobot() {
+    if (this.robotManager && this.robotManager.selectedRobotId) {
+      return this.robotManager.robots[this.robotManager.selectedRobotId];
+    }
+    return null;
+  }
+  
+  // Set task for a robot (for compatibility)
+  setRobotTask(robotId, task) {
+    if (this.robotManager && robotId && this.robotManager.robots[robotId]) {
+      this.robotManager.robots[robotId].task = task;
+      
+      // Dispatch a robot updated event
+      const robot = this.robotManager.robots[robotId];
+      const event = new CustomEvent('robotUpdated', {
+        detail: { robot }
+      });
+      window.dispatchEvent(event);
+      
+      return true;
+    }
+    return false;
   }
 }
 

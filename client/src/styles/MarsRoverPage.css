@@ -1,0 +1,333 @@
+.mars-rover-page {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #0a0a0a;
+  color: #e0e0e0;
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Left side - Terrain Panel */
+.terrain-panel {
+  flex: 3;
+  height: 100%;
+  position: relative;
+  border-right: 2px solid #ffde03;
+}
+
+/* Right side - Info Panel */
+.info-panel {
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+  height: 100%;
+  background-color: #161616;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -3px 0 15px rgba(255, 222, 3, 0.1);
+}
+
+/* Robot Details Section */
+.robot-details {
+  background-color: #1d1d1d;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-left: 3px solid #ffde03;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.robot-details h2 {
+  margin-top: 0;
+  border-bottom: 1px solid #ffde03;
+  padding-bottom: 8px;
+  font-size: 1.3rem;
+  color: #ffde03;
+  letter-spacing: 0.5px;
+}
+
+.detail-content p {
+  margin: 8px 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.detail-content span {
+  font-weight: bold;
+  color: #ffde03;
+}
+
+/* No selection view */
+.no-selection-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+}
+
+.no-selection-message {
+  text-align: center;
+  color: #ccc;
+  padding: 2rem;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  max-width: 80%;
+  border: 1px solid #ffde03;
+  box-shadow: 0 0 20px rgba(255, 222, 3, 0.1);
+}
+
+.no-selection-message h2 {
+  color: #ffde03;
+  margin-bottom: 1rem;
+}
+
+.no-selection-message p {
+  margin: 0.5rem 0;
+}
+
+/* Make sure the map takes up the full height */
+.map-view-container {
+  height: 100%;
+  width: 100%;
+}
+
+/* Task controls styling */
+.task-controls {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.task-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  margin-right: 8px;
+  transition: border-color 0.3s;
+}
+
+.task-input:focus {
+  outline: none;
+  border-color: #ffde03;
+  box-shadow: 0 0 0 2px rgba(255, 222, 3, 0.2);
+}
+
+.assign-task {
+  padding: 10px 16px;
+  background-color: #ffde03;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.9rem;
+}
+
+.assign-task:hover {
+  background-color: #ffd000;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.assign-task:active {
+  transform: translateY(1px);
+}
+
+.assign-task:disabled {
+  background-color: #333;
+  color: #555;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Robot views styling */
+.first-person-view, .radar-view {
+  width: 100%;
+  height: 100%;
+  background-color: #000;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #333;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+/* Robot Views Section */
+.robot-views {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 15px;
+  overflow-y: auto;
+}
+
+.view-container {
+  background-color: #1d1d1d;
+  border-radius: 5px;
+  padding: 15px;
+  border-left: 3px solid #ffde03;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.view-container h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  color: #ffde03;
+  letter-spacing: 0.5px;
+}
+
+.view-label {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  color: rgba(255, 222, 3, 0.8) !important;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 10;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 3px 6px;
+  border-radius: 2px;
+}
+
+/* Radar placeholder styling */
+.radar-placeholder {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.radar-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(255, 222, 3, 0.4);
+  border-radius: 50%;
+}
+
+.radar-circle:nth-child(1) {
+  width: 40%;
+  height: 40%;
+}
+
+.radar-circle:nth-child(2) {
+  width: 70%;
+  height: 70%;
+}
+
+.radar-circle:nth-child(3) {
+  width: 90%;
+  height: 90%;
+}
+
+/* Control Panel */
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background-color: #1d1d1d;
+  border-radius: 5px;
+  padding: 15px;
+  border-left: 3px solid #ffde03;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Media query for smaller screens */
+@media (max-width: 1200px) {
+  .mars-rover-page {
+    flex-direction: column;
+  }
+  
+  .terrain-panel, .info-panel {
+    width: 100%;
+    height: 50vh;
+    max-width: none;
+  }
+  
+  .terrain-panel {
+    border-right: none;
+    border-bottom: 2px solid #ffde03;
+  }
+}
+
+/* Custom scrollbar for the info panel */
+.info-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.info-panel::-webkit-scrollbar-track {
+  background: #161616;
+}
+
+.info-panel::-webkit-scrollbar-thumb {
+  background: #ffde03;
+  border-radius: 4px;
+}
+
+.info-panel::-webkit-scrollbar-thumb:hover {
+  background: #ffd000;
+}
+
+/* Add a cool tech border to the first-person and radar views */
+.first-person-view, .radar-view {
+  position: relative;
+  border: 1px solid #333;
+}
+
+.first-person-view::before, .radar-view::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #ffde03, transparent);
+}
+
+.first-person-view::after, .radar-view::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #ffde03, transparent);
+}
+
+/* Add a 'tech' looking header */
+.robot-details h2, .view-container h3 {
+  display: flex;
+  align-items: center;
+}
+
+.robot-details h2::before, .view-container h3::before {
+  content: '⬡';
+  margin-right: 8px;
+  color: #ffde03;
+  font-size: 0.8em;
+}
+
+/* Add a hint of yellow to the 3D rendering canvas */
+canvas {
+  border: 1px solid rgba(255, 222, 3, 0.2);
+} 
