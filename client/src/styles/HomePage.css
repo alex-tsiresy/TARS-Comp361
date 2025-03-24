@@ -3,13 +3,3 @@
 .homepage {
   gap: 20px;
 }
-
-.play-button {
-  background-color: #ff4500 !important;
-  color: #000 !important;
-  border: none !important;
-}
-
-.play-button:hover {
-  background-color: #ff6a33 !important;
-} 
