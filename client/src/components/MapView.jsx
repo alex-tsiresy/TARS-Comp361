@@ -1,11 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import '../styles/MapView.css';
+import { useRobots } from '../context/RobotContext';
 
-const MapView = ({ onRobotSelected }) => {
+const MapView = () => {
   const mapRef = useRef(null);
-  const [robots, setRobots] = useState([]);
   const [mapDimensions, setMapDimensions] = useState({ width: 0, height: 0 });
-  const [selectedRobotId, setSelectedRobotId] = useState(null);
+  
+  // Use the robot context instead of local state and events
+  const { 
+    robots, 
+    selectedRobotId, 
+    selectRobot,
+    addRobotAtPosition
+  } = useRobots();
   
   // Set up map dimensions on mount
   useEffect(() => {
@@ -13,52 +20,19 @@ const MapView = ({ onRobotSelected }) => {
       const { width, height } = mapRef.current.getBoundingClientRect();
       setMapDimensions({ width, height });
     }
-    
-    // Subscribe to robot updates from the event system
-    const handleRobotAdded = (event) => {
-      const { robot } = event.detail;
-      setRobots(prev => {
-        // Check if robot already exists in state
-        const exists = prev.some(r => r.id === robot.id);
-        if (exists) {
-          // Update existing robot
-          return prev.map(r => r.id === robot.id ? robot : r);
-        } else {
-          // Add new robot
-          return [...prev, robot];
-        }
-      });
+  }, []);
+
+  // Handle window resize to update map dimensions
+  useEffect(() => {
+    const handleResize = () => {
+      if (mapRef.current) {
+        const { width, height } = mapRef.current.getBoundingClientRect();
+        setMapDimensions({ width, height });
+      }
     };
     
-    const handleRobotUpdated = (event) => {
-      const { robot } = event.detail;
-      setRobots(prev => prev.map(r => r.id === robot.id ? robot : r));
-    };
-    
-    // Listen for robot selection events
-    const handleRobotSelected = (event) => {
-      const { robot } = event.detail;
-      console.log('MapView received robot selection event:', robot?.id);
-      
-      // Update internal selection state
-      setSelectedRobotId(robot?.id || null);
-      
-      // Update all robots to reflect selection state
-      setRobots(prev => prev.map(r => ({
-        ...r,
-        selected: r.id === (robot?.id || null)
-      })));
-    };
-    
-    window.addEventListener('robotAdded', handleRobotAdded);
-    window.addEventListener('robotUpdated', handleRobotUpdated);
-    window.addEventListener('robotSelected', handleRobotSelected);
-    
-    return () => {
-      window.removeEventListener('robotAdded', handleRobotAdded);
-      window.removeEventListener('robotUpdated', handleRobotUpdated);
-      window.removeEventListener('robotSelected', handleRobotSelected);
-    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Convert terrain coordinates to map coordinates
@@ -82,19 +56,8 @@ const MapView = ({ onRobotSelected }) => {
   const handleRobotClick = (robot) => {
     console.log('Robot marker clicked:', robot.id);
     
-    // Update internal selection state
-    setSelectedRobotId(robot.id);
-    
-    // Propagate selection to parent component
-    if (onRobotSelected) {
-      onRobotSelected(robot);
-    }
-    
-    // Dispatch a robot selection event for other components
-    const selectEvent = new CustomEvent('robotSelected', {
-      detail: { robot: robot }
-    });
-    window.dispatchEvent(selectEvent);
+    // Use context function to select robot
+    selectRobot(robot.id);
   };
 
   // For adding a new robot at a specific map position
@@ -116,11 +79,8 @@ const MapView = ({ onRobotSelected }) => {
     
     console.log(`Map clicked at (${clickX}, ${clickY}), terrain coordinates: (${terrainX}, ${terrainZ})`);
     
-    // Dispatch a custom event to request adding a robot
-    const addRobotEvent = new CustomEvent('addRobotRequest', {
-      detail: { position: { x: terrainX, z: terrainZ } }
-    });
-    window.dispatchEvent(addRobotEvent);
+    // Use context function to add robot
+    addRobotAtPosition(terrainX, terrainZ);
   };
 
   return (

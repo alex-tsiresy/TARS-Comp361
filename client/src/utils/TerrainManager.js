@@ -1,4 +1,5 @@
 import TerrainRenderer from './TerrainRenderer';
+import bridgeService from '../context/BridgeService';
 
 // This class manages the terrain renderer in the background
 // so we can use it for positioning robots and other operations
@@ -27,17 +28,33 @@ class TerrainManager {
     this.renderer.loadTerrain();
     console.log('Terrain loading started...');
     
-    // Listen for add robot requests
+    // Subscribe to addRobotRequest through BridgeService
+    this._unsubscribeAddRobot = bridgeService.subscribe('addRobotRequest', (data) => {
+      this.handleAddRobotRequest({ detail: data });
+    });
+    
+    // Keep DOM event listener for backward compatibility
     window.addEventListener('addRobotRequest', this.handleAddRobotRequest.bind(this));
     
     // Notify that the renderer is ready
     setTimeout(() => {
       console.log('Terrain should be loaded now, dispatching initialization event...');
+      
+      // Notify through BridgeService
+      this._notifyRendererInitialized();
+      
+      // For backward compatibility, still dispatch the DOM event
       const event = new CustomEvent('rendererInitialized', {
         detail: { renderer: this.renderer }
       });
       window.dispatchEvent(event);
     }, 1500); // Wait a bit longer for terrain to load
+  }
+  
+  // Method to notify about renderer initialization through BridgeService
+  _notifyRendererInitialized() {
+    // Use the bridge service's dedicated method instead of direct subscriber notification
+    bridgeService.notifyRendererInitialized(this.renderer);
   }
   
   handleAddRobotRequest(event) {
@@ -51,13 +68,19 @@ class TerrainManager {
       if (robotData) {
         console.log('TerrainManager: Broadcasting robot selection event for:', robotData.id);
         
-        // Dispatch a single robot selection event
-        const selectEvent = new CustomEvent('robotSelected', {
-          detail: { robot: { ...robotData } }
-        });
-        window.dispatchEvent(selectEvent);
+        // Use BridgeService to notify about robot selection
+        bridgeService.notifyRobotSelected({ ...robotData });
       }
     }
+  }
+  
+  // Add a robot directly through code instead of through events
+  addRobotAtPosition(x, z) {
+    if (this.renderer) {
+      console.log(`TerrainManager: Direct call to add robot at position (${x}, ${z})`);
+      return this.renderer.addRobotAtPosition(x, z);
+    }
+    return null;
   }
   
   dispose() {
@@ -65,7 +88,15 @@ class TerrainManager {
       this.renderer.dispose();
       this.renderer = null;
     }
+    
+    // Clean up event listeners and subscriptions
     window.removeEventListener('addRobotRequest', this.handleAddRobotRequest);
+    
+    // Clean up BridgeService subscriptions
+    if (this._unsubscribeAddRobot) {
+      this._unsubscribeAddRobot();
+      this._unsubscribeAddRobot = null;
+    }
   }
 }
 

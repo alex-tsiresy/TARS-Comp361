@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import bridgeService from '../context/BridgeService';
 
 class RobotManager {
   constructor(scene, terrainRenderer) {
@@ -105,10 +106,8 @@ class RobotManager {
     };
     
     // Dispatch an event to notify about the new robot
-    const robotAddedEvent = new CustomEvent('robotAdded', {
-      detail: { robot: this.getRobotData(id) }
-    });
-    window.dispatchEvent(robotAddedEvent);
+    const robotData = this.getRobotData(id);
+    bridgeService.notifyRobotAdded(robotData);
     
     return id;
   }
@@ -175,16 +174,14 @@ class RobotManager {
       
       console.log(`Selected robot ${robotId.substring(0, 8)} at position:`, pos);
       
-      // Dispatch event for UI
-      const event = new CustomEvent('robotSelected', { detail: { robot: this.getRobotData(robotId) } });
-      window.dispatchEvent(event);
+      // Dispatch event for UI using BridgeService
+      bridgeService.notifyRobotSelected(this.getRobotData(robotId));
     } else {
       // No robot selected
       console.log('No robot selected');
       
-      // Dispatch event for UI
-      const event = new CustomEvent('robotSelected', { detail: { robot: null } });
-      window.dispatchEvent(event);
+      // Dispatch event for UI using BridgeService
+      bridgeService.notifyRobotSelected(null);
     }
   }
   
@@ -293,10 +290,8 @@ class RobotManager {
       if (currentTime - lastUpdate > updateInterval) {
         this.lastUpdateTime[robot.id] = currentTime;
         
-        const robotUpdatedEvent = new CustomEvent('robotUpdated', {
-          detail: { robot: this.getRobotData(robot.id) }
-        });
-        window.dispatchEvent(robotUpdatedEvent);
+        // Use BridgeService to notify UI of robot position update
+        bridgeService.notifyRobotUpdated(this.getRobotData(robot.id));
       }
     });
     
@@ -350,12 +345,9 @@ class RobotManager {
     if (robotId && this.robots[robotId]) {
       this.robots[robotId].task = task;
       
-      // If selected, update UI
+      // If selected, update UI using BridgeService
       if (robotId === this.selectedRobotId) {
-        const event = new CustomEvent('robotUpdated', { 
-          detail: { robot: this.getRobotData(robotId) } 
-        });
-        window.dispatchEvent(event);
+        bridgeService.notifyRobotUpdated(this.getRobotData(robotId));
       }
     }
   }

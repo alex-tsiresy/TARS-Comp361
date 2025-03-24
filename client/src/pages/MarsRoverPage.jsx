@@ -1,153 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import MapView from '../components/MapView';
 import '../styles/MarsRoverPage.css';
-import terrainManager from '../utils/TerrainManager';
+import { useRobots } from '../context/RobotContext';
 
 const MarsRoverPage = () => {
-  const [selectedRobot, setSelectedRobot] = useState(null);
   const [taskInput, setTaskInput] = useState('');
   const firstPersonViewRef = useRef(null);
   const radarViewRef = useRef(null);
-  const [renderer, setRenderer] = useState(null);
   
-  // Handle robot selection from MapView
-  const handleRobotSelected = (robot) => {
-    console.log('Robot selected in map view:', robot?.id);
-    
-    // Update the local state with a deep copy
-    setSelectedRobot(robot ? {...robot} : null);
-    
-    // If we have a renderer, tell it to select this robot
-    if (renderer && robot) {
-      console.log(`Telling renderer to select robot ${robot.id}`);
-      
-      // Make sure the robot exists in the renderer
-      const rendererRobot = renderer.getSelectedRobot();
-      if (rendererRobot && rendererRobot.id === robot.id) {
-        console.log('Robot already selected in renderer');
-      } else {
-        console.log('Selecting robot in renderer');
-        renderer.robotManager.selectRobot(robot.id);
-        
-        // Force setup of renderers if needed
-        if (firstPersonViewRef.current && radarViewRef.current) {
-          console.log('Setting up renderers for selected robot');
-          setTimeout(() => {
-            renderer.setupRobotViewRenderer(firstPersonViewRef.current);
-            renderer.setupRadarRenderer(radarViewRef.current);
-          }, 50);
-        }
-      }
-    } else if (renderer && !robot) {
-      console.log('Clearing robot selection in renderer');
-      renderer.robotManager.selectRobot(null);
-    }
-    
-    // Broadcast the selection to other components
-    if (robot) {
-      console.log('Broadcasting robot selection from MapView handler');
-      const event = new CustomEvent('robotSelected', {
-        detail: { robot: {...robot} }
-      });
-      window.dispatchEvent(event);
-    }
-  };
+  // Get state and actions from context
+  const { 
+    selectedRobot, 
+    renderer, 
+    setRobotTask 
+  } = useRobots();
   
-  // Initialize renderer from TerrainManager
-  useEffect(() => {
-    const handleRendererInitialized = (event) => {
-      const { renderer: newRenderer } = event.detail;
-      console.log('Renderer initialized in MarsRoverPage from TerrainManager');
-      setRenderer(newRenderer);
-    };
-    
-    window.addEventListener('rendererInitialized', handleRendererInitialized);
-    
-    return () => {
-      window.removeEventListener('rendererInitialized', handleRendererInitialized);
-    };
-  }, []);
-  
-  // Listen for robot updates
-  useEffect(() => {
-    const handleRobotUpdated = (event) => {
-      const { robot } = event.detail;
-      if (!robot) {
-        console.warn('Received robotUpdated event with no robot data');
-        return;
-      }
-      
-      if (selectedRobot && robot.id === selectedRobot.id) {
-        console.log(`Robot ${robot.id} updated, height: ${robot.height}, updating state`);
-        
-        // Make a deep copy to ensure React sees it as a state change
-        setSelectedRobot(currentRobot => {
-          // Only update if data has actually changed
-          if (JSON.stringify(currentRobot) !== JSON.stringify(robot)) {
-            return { ...robot };
-          }
-          return currentRobot;
-        });
-      }
-    };
-    
-    console.log('Adding robotUpdated event listener');
-    window.addEventListener('robotUpdated', handleRobotUpdated);
-    
-    return () => {
-      console.log('Removing robotUpdated event listener');
-      window.removeEventListener('robotUpdated', handleRobotUpdated);
-    };
-  }, [selectedRobot]);
-  
-  // Listen for robot selection events (including from TerrainManager)
-  useEffect(() => {
-    const handleRobotSelected = (event) => {
-      const { robot } = event.detail;
-      console.log('Robot selected event received in MarsRoverPage:', robot?.id);
-      
-      if (!robot) {
-        console.log('Clearing selected robot');
-        setSelectedRobot(null);
-        return;
-      }
-      
-      console.log('Setting selected robot state to:', robot);
-      // Create a complete copy of the robot object to avoid any reference issues
-      setSelectedRobot(prevRobot => {
-        // If we already have this robot selected with the same data, avoid re-render
-        if (prevRobot?.id === robot.id && 
-            JSON.stringify(prevRobot) === JSON.stringify(robot)) {
-          console.log('Robot already selected with same data, avoiding re-render');
-          return prevRobot;
-        }
-        return { ...robot };
-      });
-      
-      // If the robot exists and the renderer exists, ensure it's selected in the renderer too
-      if (robot && renderer) {
-        console.log(`Ensuring robot ${robot.id} is selected in renderer`);
-        renderer.robotManager.selectRobot(robot.id);
-        
-        // Force setup of views if needed
-        if (firstPersonViewRef.current && radarViewRef.current) {
-          console.log('Setting up view renderers for selected robot');
-          renderer.setupRobotViewRenderer(firstPersonViewRef.current);
-          renderer.setupRadarRenderer(radarViewRef.current);
-        }
-      }
-    };
-    
-    console.log('Adding robotSelected event listener in MarsRoverPage');
-    window.addEventListener('robotSelected', handleRobotSelected);
-    
-    return () => {
-      console.log('Removing robotSelected event listener in MarsRoverPage');
-      window.removeEventListener('robotSelected', handleRobotSelected);
-    };
-  }, [renderer]);
-  
-  // Set up robot view renderers
+  // Set up robot view renderers when renderer is available
   useEffect(() => {
     if (!renderer || !firstPersonViewRef.current || !radarViewRef.current) {
       return; // Wait until all dependencies are available
@@ -185,31 +53,20 @@ const MarsRoverPage = () => {
     } catch (error) {
       console.error('Failed to set up robot view renderers:', error);
     }
-  }, [renderer, firstPersonViewRef, radarViewRef]);
+  }, [renderer, selectedRobot]);
   
   // Handle task assignment
   const handleAssignTask = () => {
-    if (selectedRobot && renderer && taskInput) {
-      renderer.setRobotTask(selectedRobot.id, taskInput);
-      setSelectedRobot({
-        ...selectedRobot,
-        task: taskInput
-      });
+    if (selectedRobot && taskInput) {
+      setRobotTask(selectedRobot.id, taskInput);
       setTaskInput('');
     }
   };
   
-  // Log selected robot state whenever it changes
-  useEffect(() => {
-    console.log('Selected robot state updated:', selectedRobot);
-  }, [selectedRobot]);
-  
   return (
     <div className="mars-rover-page">
       <div className="terrain-panel">
-        <MapView 
-          onRobotSelected={handleRobotSelected}
-        />
+        <MapView />
       </div>
       
       <div className="info-panel">

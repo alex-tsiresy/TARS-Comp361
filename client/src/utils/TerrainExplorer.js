@@ -3,6 +3,7 @@ import CameraController from './CameraController';
 import RobotManager from './RobotManager';
 import RobotViewManager from './RobotViewManager';
 import { InputHandler } from './InputHandler';
+import bridgeService from '../context/BridgeService';
 
 class TerrainExplorer {
   constructor(container) {
@@ -278,12 +279,9 @@ class TerrainExplorer {
     if (this.robotManager && robotId && this.robotManager.robots[robotId]) {
       this.robotManager.robots[robotId].task = task;
       
-      // Dispatch a robot updated event
-      const robot = this.robotManager.robots[robotId];
-      const event = new CustomEvent('robotUpdated', {
-        detail: { robot }
-      });
-      window.dispatchEvent(event);
+      // Use BridgeService to notify about the robot update
+      const robot = this.robotManager.getRobotData(robotId);
+      bridgeService.notifyRobotUpdated(robot);
       
       return true;
     }
