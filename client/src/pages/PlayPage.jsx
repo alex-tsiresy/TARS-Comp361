@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { TerrainExplorer } from './TerrainExplorer';
+import { TerrainExplorer } from '../utils/TerrainExplorer';
 import '../styles/MarsRoverUI.css';
 
 const MarsRoverUI = () => {
@@ -9,9 +9,6 @@ const MarsRoverUI = () => {
   const [robots, setRobots] = useState([]);
   const [selectedRobot, setSelectedRobot] = useState(null);
   const [explorer, setExplorer] = useState(null);
-
-  // We don't need to create a window resize handler that triggers another resize event
-  // This was causing the infinite loop. Just let the natural resize events flow through.
 
   useEffect(() => {
     if (terrainContainerRef.current) {

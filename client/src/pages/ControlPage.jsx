@@ -1,5 +1,5 @@
 
-import TerrainComponent from './TerrainComponent';
+import TerrainComponent from '../components/TerrainComponent';
 
 export default function ControlPage() {
     return (

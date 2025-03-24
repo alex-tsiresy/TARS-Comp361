@@ -1,17 +1,17 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import HomePage from './components/HomePage'
-import ControlPage from './components/ControlPage'
-import InfoPage from './components/InfoPage'
-import MarsRoverUI from './components/MarsRoverUI'
+import HomePage from './pages/HomePage'
+import ControlPage from './pages/ControlPage'
+import InfoPage from './pages/InfoPage'
+import MarsRoverPage from './pages/MarsRoverPage'
 
 function App() {
     return (
         <Router>
             <Routes>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/ControlPage" element={<ControlPage />} />
-                <Route path="/InfoPage" element={<InfoPage />} />
-                <Route path="/MarsRoverUI" element={<MarsRoverUI />} />
+                <Route path="/control" element={<ControlPage />} />
+                <Route path="/info" element={<InfoPage />} />
+                <Route path="/play" element={<MarsRoverPage />} />
             </Routes>
         </Router>
     )
