@@ -12,24 +12,82 @@ class RobotManager {
     this.robotMaterial = new THREE.MeshStandardMaterial({ 
       color: 0xf44336,
       metalness: 0.7,
-      roughness: 0.3
+      roughness: 0.3,
+      emissive: 0x441111, // Add slight emissive property for better visibility
+      emissiveIntensity: 0.3
     });
     
     this.selectedRobotMaterial = new THREE.MeshStandardMaterial({ 
       color: 0x4caf50,
       metalness: 0.7,
-      roughness: 0.3
+      roughness: 0.3,
+      emissive: 0x114411, // Add slight emissive property for better visibility
+      emissiveIntensity: 0.3
     });
     
     // For robot camera views
-    this.robotCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+    this.robotCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 2000);
+    this.robotCamera.fov = 75; // Wide FOV for better visibility
+    this.robotCamera.updateProjectionMatrix();
+    
+    // Add a camera helper for debugging (visible in the main view)
     this.robotCameraHelper = new THREE.CameraHelper(this.robotCamera);
     this.scene.add(this.robotCameraHelper);
     this.robotCameraHelper.visible = false; // Hide by default
     
+    // Add a visible element to robot's view so we know it's working
+    this.createRobotViewHelper();
+    
     // Create a raycaster for robot selection
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
+  }
+  
+  // Create a helper object that will be visible in the robot's view
+  createRobotViewHelper() {
+    // Create a small wireframe sphere that will follow the robot
+    const geometry = new THREE.SphereGeometry(2, 8, 8);
+    const material = new THREE.MeshBasicMaterial({ 
+      color: 0xffff00, 
+      wireframe: true 
+    });
+    this.viewHelper = new THREE.Mesh(geometry, material);
+    this.scene.add(this.viewHelper);
+    
+    // Create a grid helper for orientation
+    this.gridHelper = new THREE.GridHelper(100, 10, 0xff0000, 0x444444);
+    this.scene.add(this.gridHelper);
+  }
+  
+  // Update the view helper positions
+  updateViewHelpers() {
+    if (this.selectedRobotId && this.robots[this.selectedRobotId]) {
+      const robot = this.robots[this.selectedRobotId];
+      const pos = robot.position;
+      const dir = robot.direction;
+      
+      console.log(`Updating view helpers for robot at (${pos.x}, ${pos.y}, ${pos.z})`);
+      
+      // Position the view helper in front of the robot
+      if (this.viewHelper) {
+        this.viewHelper.position.set(
+          pos.x + dir.x * 15, 
+          pos.y + 2, 
+          pos.z + dir.z * 15
+        );
+        this.viewHelper.visible = true;
+      }
+      
+      // Position the grid helper under the robot
+      if (this.gridHelper) {
+        this.gridHelper.position.set(pos.x, pos.y - 5, pos.z);
+        this.gridHelper.visible = true;
+      }
+    } else {
+      // No robot selected, hide helpers
+      if (this.viewHelper) this.viewHelper.visible = false;
+      if (this.gridHelper) this.gridHelper.visible = false;
+    }
   }
   
   // Create a new robot
@@ -40,26 +98,57 @@ class RobotManager {
     if (!position) {
       const x = (Math.random() - 0.5) * 1600; // -800 to 800
       const z = (Math.random() - 0.5) * 1600; // -800 to 800
-      const y = this.terrainRenderer.getHeightAtPosition(x, z) + 5; // 5 units above terrain
+      const terrainHeight = this.terrainRenderer.getHeightAtPosition(x, z);
+      // Use a default height if the terrain height is too close to zero
+      const actualHeight = Math.abs(terrainHeight) < 0.1 ? 20 : terrainHeight;
+      const y = actualHeight + 5; // 5 units above terrain
       position = { x, y, z };
+      console.log(`Creating robot at position (${x}, ${y}) with terrain height ${terrainHeight}, using actual height ${actualHeight}`);
+    } else {
+      const terrainHeight = this.terrainRenderer.getHeightAtPosition(position.x, position.z);
+      // Use a default height if the terrain height is too close to zero
+      const actualHeight = Math.abs(terrainHeight) < 0.1 ? 20 : terrainHeight;
+      position.y = actualHeight + 5; // Ensure robot is above terrain
+      console.log(`Creating robot at provided position (${position.x}, ${position.y}) with terrain height ${terrainHeight}, using actual height ${actualHeight}`);
     }
     
-    // Create robot mesh - a simple sphere for now
-    const geometry = new THREE.SphereGeometry(5, 16, 16);
-    const mesh = new THREE.Mesh(geometry, this.robotMaterial);
-    mesh.position.set(position.x, position.y, position.z);
-    mesh.castShadow = true;
-    mesh.userData.robotId = id; // Store ID in the mesh for picking
+    // Create robot mesh - use a combined geometry for better visibility
+    const robotGroup = new THREE.Group();
+    
+    // Main body - larger sphere
+    const bodyGeometry = new THREE.SphereGeometry(8, 16, 16);
+    const bodyMesh = new THREE.Mesh(bodyGeometry, this.robotMaterial);
+    bodyMesh.castShadow = true;
+    robotGroup.add(bodyMesh);
+    
+    // Direction indicator - cone pointing in travel direction
+    const coneGeometry = new THREE.ConeGeometry(4, 12, 8);
+    coneGeometry.rotateX(-Math.PI / 2); // Orient to point forward (z-axis)
+    const coneMesh = new THREE.Mesh(coneGeometry, this.robotMaterial);
+    coneMesh.position.set(0, 0, 10); // Position in front of the body
+    coneMesh.castShadow = true;
+    robotGroup.add(coneMesh);
+    
+    // Antenna - helps with visibility from above
+    const antennaGeometry = new THREE.CylinderGeometry(0.5, 0.5, 15, 8);
+    const antennaMesh = new THREE.Mesh(antennaGeometry, this.robotMaterial);
+    antennaMesh.position.set(0, 10, 0); // Position on top
+    antennaMesh.castShadow = true;
+    robotGroup.add(antennaMesh);
+    
+    // Position the entire group
+    robotGroup.position.set(position.x, position.y, position.z);
+    robotGroup.userData.robotId = id; // Store ID for picking
     
     // Add to scene
-    this.scene.add(mesh);
+    this.scene.add(robotGroup);
     
-    // Store robot data
+    // Store robot data with explicit terrain height
     this.robots[id] = {
       id,
-      mesh,
+      mesh: robotGroup, // Store the group instead of a single mesh
       position: { ...position },
-      height: position.y,
+      terrainHeight: position.y - 5, // Store the actual terrain height
       task: '',
       coordinates: {
         x: position.x,
@@ -70,7 +159,9 @@ class RobotManager {
       speed: 0.5, // Default speed
       moveTimer: 0,
       moveInterval: Math.random() * 5000 + 2000, // Random interval for movement changes
-      selected: false
+      selected: false,
+      // Add this flag to ensure the robot is always visible in views
+      forceVisible: true
     };
     
     // Dispatch an event to notify about the new robot
@@ -95,11 +186,24 @@ class RobotManager {
   
   // Select a robot
   selectRobot(robotId) {
+    console.log(`SelectRobot called with ID: ${robotId}`);
+    
+    // If attempting to select a robot that doesn't exist, log an error
+    if (robotId && !this.robots[robotId]) {
+      console.error(`Attempted to select non-existent robot with ID: ${robotId}`);
+      return;
+    }
+    
     // Deselect previous robot
     if (this.selectedRobotId && this.robots[this.selectedRobotId]) {
       const prevRobot = this.robots[this.selectedRobotId];
-      prevRobot.mesh.material = this.robotMaterial;
+      prevRobot.mesh.children.forEach(child => {
+        if (child instanceof THREE.Mesh) {
+          child.material = this.robotMaterial;
+        }
+      });
       prevRobot.selected = false;
+      console.log(`Deselected previous robot: ${this.selectedRobotId}`);
     }
     
     this.selectedRobotId = robotId;
@@ -107,7 +211,11 @@ class RobotManager {
     // Select new robot
     if (robotId && this.robots[robotId]) {
       const robot = this.robots[robotId];
-      robot.mesh.material = this.selectedRobotMaterial;
+      robot.mesh.children.forEach(child => {
+        if (child instanceof THREE.Mesh) {
+          child.material = this.selectedRobotMaterial;
+        }
+      });
       robot.selected = true;
       
       // Position the robot camera
@@ -122,7 +230,10 @@ class RobotManager {
       // Make camera helper visible for debugging
       this.robotCameraHelper.visible = true;
       
-      console.log(`Selected robot ${robotId.substring(0, 8)} at position`, pos);
+      // Ensure view helpers are properly positioned
+      this.updateViewHelpers();
+      
+      console.log(`Selected robot ${robotId.substring(0, 8)} at position:`, pos);
       
       // Dispatch event for UI
       const event = new CustomEvent('robotSelected', { detail: { robot: this.getRobotData(robotId) } });
@@ -130,6 +241,12 @@ class RobotManager {
     } else {
       // No robot selected
       this.robotCameraHelper.visible = false;
+      
+      // Hide view helpers
+      if (this.viewHelper) this.viewHelper.visible = false;
+      if (this.gridHelper) this.gridHelper.visible = false;
+      
+      console.log('No robot selected');
       
       // Dispatch event for UI
       const event = new CustomEvent('robotSelected', { detail: { robot: null } });
@@ -148,21 +265,42 @@ class RobotManager {
     this.raycaster.setFromCamera(this.mouse, camera);
     
     // Get all robot meshes
-    const robotMeshes = Object.values(this.robots).map(robot => robot.mesh);
+    const robotGroups = Object.values(this.robots).map(robot => robot.mesh);
+    
+    // Debug log robots
+    console.log(`Checking for robot clicks among ${robotGroups.length} robots`);
     
     // Check for intersections
-    const intersects = this.raycaster.intersectObjects(robotMeshes);
+    const intersects = this.raycaster.intersectObjects(robotGroups, true); // Use recursive search
     
     if (intersects.length > 0) {
-      // Find clicked robot
-      const robotId = intersects[0].object.userData.robotId;
-      this.selectRobot(robotId);
-      return true;
-    } else {
-      // Deselect if clicking empty space
-      this.selectRobot(null);
-      return false;
+      console.log(`Found ${intersects.length} intersections`);
+      
+      // Find the parent group that has the robotId
+      let currentObject = intersects[0].object;
+      while (currentObject && !currentObject.userData.robotId) {
+        currentObject = currentObject.parent;
+      }
+      
+      // If we found a robot group, select it
+      if (currentObject && currentObject.userData.robotId) {
+        const robotId = currentObject.userData.robotId;
+        console.log(`Found robot with ID: ${robotId}`);
+        
+        // Verify robot exists
+        if (this.robots[robotId]) {
+          console.log(`Selecting robot ${robotId}`);
+          this.selectRobot(robotId);
+          return true;
+        } else {
+          console.warn(`Robot with ID ${robotId} found in scene but not in robots collection`);
+        }
+      }
     }
+    
+    // Deselect if clicking empty space
+    this.selectRobot(null);
+    return false;
   }
   
   // Update all robots
@@ -194,16 +332,23 @@ class RobotManager {
       
       // Get terrain height at new position
       const terrainHeight = this.terrainRenderer.getHeightAtPosition(clampedX, clampedZ);
+      // Use a default height if the terrain height is too close to zero
+      const actualHeight = Math.abs(terrainHeight) < 0.1 ? 20 : terrainHeight;
       
       // Update position
       robot.position = {
         x: clampedX,
-        y: terrainHeight + 5, // 5 units above terrain
+        y: actualHeight + 5, // 5 units above terrain
         z: clampedZ
       };
+      robot.terrainHeight = actualHeight; // Update the terrain height
       
       // Update mesh position
-      robot.mesh.position.set(clampedX, terrainHeight + 5, clampedZ);
+      robot.mesh.position.set(clampedX, actualHeight + 5, clampedZ);
+      
+      // Also rotate the robot to face the direction of movement
+      const rotationAngle = Math.atan2(robot.direction.z, robot.direction.x);
+      robot.mesh.rotation.y = rotationAngle;
       
       // Notify about robot position update, but throttle to avoid too many events
       const lastUpdate = this.lastUpdateTime[robot.id] || 0;
@@ -222,15 +367,21 @@ class RobotManager {
       const robot = this.robots[this.selectedRobotId];
       const pos = robot.position;
       
+      // Position the camera at the robot's eye level
       this.robotCamera.position.set(pos.x, pos.y + 3, pos.z);
+      
+      // Look in the direction the robot is facing
       this.robotCamera.lookAt(
         pos.x + robot.direction.x * 10,
         pos.y + 2,
         pos.z + robot.direction.z * 10
       );
       
-      // Update camera helper
+      // Update camera helper for debugging
       this.robotCameraHelper.update();
+      
+      // Update the view helpers that will be visible in the robot views
+      this.updateViewHelpers();
     }
   }
   
@@ -257,7 +408,7 @@ class RobotManager {
         x: Math.round(robot.position.x + 1000), // Convert to 0-2000 range for UI
         z: Math.round(robot.position.z + 1000)
       },
-      height: Math.round(robot.position.y - 5), // Actual terrain height
+      height: Math.round(robot.terrainHeight), // Use the actual terrain height
       selected: robot.id === this.selectedRobotId
     };
   }

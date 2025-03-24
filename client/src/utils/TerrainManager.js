@@ -10,6 +10,8 @@ class TerrainManager {
   }
   
   initialize() {
+    console.log('Initializing TerrainManager with hidden renderer...');
+    
     // Create a hidden div to host the renderer
     const hiddenContainer = document.createElement('div');
     hiddenContainer.style.position = 'absolute';
@@ -23,17 +25,19 @@ class TerrainManager {
     // Initialize the renderer
     this.renderer = new TerrainRenderer(hiddenContainer);
     this.renderer.loadTerrain();
+    console.log('Terrain loading started...');
     
     // Listen for add robot requests
     window.addEventListener('addRobotRequest', this.handleAddRobotRequest.bind(this));
     
     // Notify that the renderer is ready
     setTimeout(() => {
+      console.log('Terrain should be loaded now, dispatching initialization event...');
       const event = new CustomEvent('rendererInitialized', {
         detail: { renderer: this.renderer }
       });
       window.dispatchEvent(event);
-    }, 1000); // Wait a bit for terrain to load
+    }, 1500); // Wait a bit longer for terrain to load
   }
   
   handleAddRobotRequest(event) {

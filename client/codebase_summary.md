@@ -40,8 +40,7 @@ client/
 - **src/pages/ControlPage.jsx**: A minimal page for controlling rover/simulation parameters.
 - **src/pages/InfoPage.jsx**: Information page containing project instructions or documentation.
 - **src/pages/MarsRoverPage.jsx**: The main simulation interface that includes:
-  - A terrain view for visualizing the Mars surface
-  - Controls for adding robots and zooming
+  - A 2D map view for visualizing robot positions on the Mars surface
   - Details panel showing information about selected robots
   - First-person view from the robot's perspective
   - Radar view showing the surrounding area
@@ -50,10 +49,15 @@ client/
 
 ### Components
 
-- **src/components/TerrainView.jsx**: A component that renders the 3D terrain view and provides controls for zooming and adding robots. It initializes and manages the TerrainRenderer instance.
+- **src/components/MapView.jsx**: A component that renders a 2D map representation of the Mars terrain with robots shown as markers with direction indicators. Users can click on the map to add robots or select existing ones.
 - **src/components/TerrainComponent.jsx**: A wrapper component for the terrain functionality.
 
 ### Utility Classes
+
+- **src/utils/TerrainManager.js**: A singleton manager that creates and maintains a hidden 3D terrain renderer for background processing. It handles:
+  - Initializing the terrain renderer in a hidden container
+  - Responding to robot addition requests
+  - Coordinating between the 2D map view and 3D terrain simulation
 
 - **src/utils/TerrainRenderer.js**: Core 3D rendering class built with Three.js that handles:
   - Scene, camera, and renderer setup
@@ -62,6 +66,7 @@ client/
   - Multiple view perspectives (birds-eye, first-person, radar)
   - User input processing
   - Zoom functionality
+  - Rendering robot first-person and radar views
 
 - **src/utils/RobotManager.js**: Manages robots in the 3D environment:
   - Robot creation and rendering
@@ -69,13 +74,15 @@ client/
   - Robot movement and task management
   - Camera views from robot perspective
   - Robot state tracking and updates
+  - Visual helpers for first-person and radar views
 
 - **src/utils/TerrainExplorer.js**: Additional terrain functionality for exploration purposes.
 
 ### Styles
 
 - **src/styles/MarsRoverPage.css**: Styling for the main Mars Rover simulation page.
-- **src/styles/TerrainView.css**: Styling for the terrain view component.
+- **src/styles/MapView.css**: Styling for the 2D map view including robot markers and direction indicators.
+- **src/styles/TerrainView.css**: Styling for the 3D terrain view component.
 - **src/styles/MarsRoverUI.css**: Styling for UI elements in the Mars Rover interface.
 - **src/styles/HomePage.css**: Styling for the home page.
 - **src/styles/index.css**: Additional global styles.
@@ -88,18 +95,46 @@ client/
 ### Public Assets
 
 - **public/rock01.jpg** and **public/rock02.jpg**: Rock textures used for terrain rendering.
-- **public/out.png**: Unknown image.
+- **public/out.png**: Height map for terrain generation and map background.
 - **public/globe.png**: Possibly an image of Mars or Earth.
+
+## Key Features
+
+### 2D Map View with 3D Simulation
+
+The application uses a hybrid approach combining:
+1. A simplified 2D map interface for easy visualization and interaction
+2. A fully-featured 3D simulation running in the background
+
+This approach offers:
+- Better performance and simpler user interface via the 2D map
+- Realistic terrain interaction via the 3D physics simulation
+- Full 3D views (first-person and radar) when robots are selected
+
+### Robot Simulation and Control
+
+The application allows users to:
+1. Add robot rovers to the Mars terrain by clicking on the map
+2. Control and monitor these rovers
+3. View the terrain from multiple perspectives (map view, first-person, radar)
+4. Assign tasks to the rovers
+
+### Real-time Robot Updates
+
+Robots move autonomously across the terrain with:
+- Realistic terrain height adaptation
+- Random movement patterns
+- Real-time position updates reflected on the 2D map
+- Direction indicators showing robot orientation
+- First-person and radar views that update as robots move
 
 ## Summary
 
-This codebase implements a Mars Rover simulation web application that allows users to:
+This codebase implements a Mars Rover simulation web application with a user-friendly interface. It uses React for the UI components and Three.js for 3D rendering and terrain simulation. The application demonstrates a clean separation of concerns with UI components in the components/pages directories and core functionality in the utils directory.
 
-1. Add robot rovers to a 3D Mars terrain
-2. Control and monitor these rovers
-3. View the terrain from different perspectives (birds-eye, first-person, radar)
-4. Assign tasks to the rovers
-
-The application uses React for the UI components and Three.js for 3D rendering and terrain simulation. The main functionality is implemented in the TerrainRenderer and RobotManager classes, which handle the 3D environment, robot behavior, and user interaction.
-
-The interface is divided into a terrain view panel on the left and information/control panels on the right, providing users with details about selected robots and their environment. The application demonstrates a clean separation of concerns with UI components in the components directory and core functionality in the utils directory. 
+The recent enhancements include:
+1. Converting the primary interface from a 3D view to a 2D map for better usability
+2. Running the 3D terrain simulation in the background for physics and robot movement
+3. Adding visual indicators for robot direction and movement
+4. Enhancing the first-person and radar views with better visibility and helpers
+5. Optimizing performance with throttled updates and efficient rendering 

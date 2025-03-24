@@ -12,11 +12,32 @@ const MarsRoverPage = () => {
   
   // Handle robot selection
   const handleRobotSelected = (robot) => {
+    console.log('Robot selected in map view:', robot?.id);
     setSelectedRobot(robot);
     
     // If we have a renderer, tell it to select this robot
     if (renderer && robot) {
-      renderer.robotManager.selectRobot(robot.id);
+      console.log(`Telling renderer to select robot ${robot.id}`);
+      
+      // Make sure the robot exists in the renderer
+      const rendererRobot = renderer.getSelectedRobot();
+      if (rendererRobot && rendererRobot.id === robot.id) {
+        console.log('Robot already selected in renderer');
+      } else {
+        renderer.robotManager.selectRobot(robot.id);
+        
+        // Force setup of renderers if needed
+        if (firstPersonViewRef.current && radarViewRef.current) {
+          setTimeout(() => {
+            console.log('Re-setting up renderers after robot selection');
+            renderer.setupRobotViewRenderer(firstPersonViewRef.current);
+            renderer.setupRadarRenderer(radarViewRef.current);
+          }, 50);
+        }
+      }
+    } else if (renderer && !robot) {
+      console.log('Clearing robot selection in renderer');
+      renderer.robotManager.selectRobot(null);
     }
   };
   
@@ -40,6 +61,8 @@ const MarsRoverPage = () => {
     const handleRobotUpdated = (event) => {
       const { robot } = event.detail;
       if (robot && selectedRobot && robot.id === selectedRobot.id) {
+        // Log the height value to debug
+        console.log('Robot updated, height:', robot.height);
         setSelectedRobot(robot);
       }
     };
@@ -53,19 +76,42 @@ const MarsRoverPage = () => {
   
   // Set up robot view renderers
   useEffect(() => {
-    const setupRenderers = () => {
-      if (renderer && firstPersonViewRef.current && radarViewRef.current) {
-        try {
-          renderer.setupRobotViewRenderer(firstPersonViewRef.current);
-          renderer.setupRadarRenderer(radarViewRef.current);
-        } catch (error) {
-          console.error('Error setting up renderers:', error);
-        }
-      }
-    };
+    if (!renderer || !firstPersonViewRef.current || !radarViewRef.current) {
+      return; // Wait until all dependencies are available
+    }
     
-    // Only set up renderers if all dependencies are available
-    setupRenderers();
+    try {
+      console.log('Setting up robot view renderers');
+      
+      // Log container dimensions for debugging
+      const fpvSize = {
+        width: firstPersonViewRef.current.clientWidth,
+        height: firstPersonViewRef.current.clientHeight
+      };
+      
+      const radarSize = {
+        width: radarViewRef.current.clientWidth,
+        height: radarViewRef.current.clientHeight
+      };
+      
+      console.log('Container sizes:', { fpv: fpvSize, radar: radarSize });
+      
+      // Setup both renderers
+      renderer.setupRobotViewRenderer(firstPersonViewRef.current);
+      renderer.setupRadarRenderer(radarViewRef.current);
+      
+      // Force a resize event to ensure renderers are properly sized
+      window.dispatchEvent(new Event('resize'));
+      
+      // Schedule another resize after a delay in case of layout shifts
+      const resizeTimer = setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 1000);
+      
+      return () => clearTimeout(resizeTimer);
+    } catch (error) {
+      console.error('Failed to set up robot view renderers:', error);
+    }
   }, [renderer, firstPersonViewRef, radarViewRef]);
   
   // Handle task assignment
@@ -97,7 +143,7 @@ const MarsRoverPage = () => {
                 <p><span>ID:</span> {selectedRobot.id.substring(0, 8)}</p>
                 <p><span>Position:</span> X: {selectedRobot.position.x.toFixed(2)}, 
                                   Z: {selectedRobot.position.z.toFixed(2)}</p>
-                <p><span>Height:</span> {selectedRobot.height ? selectedRobot.height.toFixed(2) : '0'}m</p>
+                <p><span>Height:</span> {selectedRobot.height ? Math.max(0, selectedRobot.height).toFixed(0) : '20'}m</p>
                 <p><span>Coordinates:</span> {selectedRobot.coordinates ? 
                   `${selectedRobot.coordinates.x.toFixed(2)}, ${selectedRobot.coordinates.z.toFixed(2)}` : 
                   'N/A'}</p>
@@ -111,9 +157,44 @@ const MarsRoverPage = () => {
                 <div 
                   className="first-person-view" 
                   ref={firstPersonViewRef}
-                  style={{ height: '120px', backgroundColor: '#111' }}
+                  style={{ 
+                    height: '200px', 
+                    backgroundColor: '#111', 
+                    border: '1px solid #333',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
                 >
                   {/* The 3D renderer will be attached here */}
+                  <div className="view-label" style={{
+                    position: 'absolute',
+                    bottom: '10px',
+                    left: '10px',
+                    color: 'rgba(255,255,255,0.7)',
+                    fontSize: '12px',
+                    pointerEvents: 'none',
+                    zIndex: 10
+                  }}>
+                    Robot: {selectedRobot.id.substring(0, 8)} - Facing: {
+                      selectedRobot.direction ? 
+                      `X:${selectedRobot.direction.x.toFixed(2)}, Z:${selectedRobot.direction.z.toFixed(2)}` :
+                      'N/A'
+                    }
+                  </div>
+                  
+                  {/* Fallback visual indicator */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: '20px',
+                    height: '20px',
+                    backgroundColor: 'yellow',
+                    borderRadius: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 5,
+                    boxShadow: '0 0 10px 5px rgba(255,255,0,0.5)'
+                  }} />
                 </div>
               </div>
               
@@ -122,9 +203,41 @@ const MarsRoverPage = () => {
                 <div 
                   className="radar-view" 
                   ref={radarViewRef}
-                  style={{ height: '120px', backgroundColor: '#111' }}
+                  style={{ 
+                    height: '200px', 
+                    backgroundColor: '#111', 
+                    border: '1px solid #333',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
                 >
                   {/* The 3D renderer will be attached here */}
+                  <div className="view-label" style={{
+                    position: 'absolute',
+                    bottom: '10px',
+                    left: '10px',
+                    color: 'rgba(255,255,255,0.7)',
+                    fontSize: '12px',
+                    pointerEvents: 'none',
+                    zIndex: 10
+                  }}>
+                    Overhead view - {selectedRobot.coordinates ? 
+                      `Pos: ${selectedRobot.coordinates.x.toFixed(0)}, ${selectedRobot.coordinates.z.toFixed(0)}` : 
+                      'N/A'}
+                  </div>
+                  
+                  {/* Fallback visual indicator */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: '30px',
+                    height: '30px',
+                    border: '2px solid red',
+                    borderRadius: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 5
+                  }} />
                 </div>
               </div>
             </div>
