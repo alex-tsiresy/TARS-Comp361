@@ -165,22 +165,52 @@ class TerrainRenderer {
   }
   
   getHeightAtPosition(x, z) {
-    if (!this.heightmapData) return 0;
+    if (!this.terrain) {
+      console.warn('Terrain not loaded yet, returning default height');
+      return 0;
+    }
     
-    // Convert world coordinates to heightmap coordinates
-    const halfSize = this.terrainSize / 2;
-    const u = ((x + halfSize) / this.terrainSize) * this.heightmapWidth;
-    const v = ((z + halfSize) / this.terrainSize) * this.heightmapHeight;
+    // Convert world coordinates to terrain grid coordinates
+    const gridSize = this.terrainSize / 2;
     
-    // Get pixel coordinates
-    const px = Math.floor(Math.max(0, Math.min(this.heightmapWidth - 1, u)));
-    const py = Math.floor(Math.max(0, Math.min(this.heightmapHeight - 1, v)));
+    // Normalize x and z to 0-1 range
+    const normalizedX = (x + gridSize) / this.terrainSize;
+    const normalizedZ = (z + gridSize) / this.terrainSize;
     
-    // Get pixel data
-    const index = (py * this.heightmapWidth + px) * 4;
-    const height = this.heightmapData[index] / 255.0;
+    // Get terrain vertices
+    const vertices = this.terrain.geometry.attributes.position.array;
     
-    return height * 300; // Scale to match displacement scale
+    // Calculate terrain grid resolution
+    const resolution = Math.sqrt(vertices.length / 3);
+    
+    // Calculate grid position
+    const gridX = Math.floor(normalizedX * (resolution - 1));
+    const gridZ = Math.floor(normalizedZ * (resolution - 1));
+    
+    // Clamp to valid grid positions
+    const clampedGridX = Math.max(0, Math.min(resolution - 2, gridX));
+    const clampedGridZ = Math.max(0, Math.min(resolution - 2, gridZ));
+    
+    // Get heights at the four corners of the grid cell
+    const idx00 = 3 * (clampedGridZ * resolution + clampedGridX) + 1; // +1 to get Y component
+    const idx10 = 3 * (clampedGridZ * resolution + (clampedGridX + 1)) + 1;
+    const idx01 = 3 * ((clampedGridZ + 1) * resolution + clampedGridX) + 1;
+    const idx11 = 3 * ((clampedGridZ + 1) * resolution + (clampedGridX + 1)) + 1;
+    
+    const h00 = vertices[idx00];
+    const h10 = vertices[idx10];
+    const h01 = vertices[idx01];
+    const h11 = vertices[idx11];
+    
+    // Calculate fractional position within the cell
+    const fracX = normalizedX * (resolution - 1) - clampedGridX;
+    const fracZ = normalizedZ * (resolution - 1) - clampedGridZ;
+    
+    // Bilinear interpolation
+    const h0 = h00 * (1 - fracX) + h10 * fracX;
+    const h1 = h01 * (1 - fracX) + h11 * fracX;
+    
+    return h0 * (1 - fracZ) + h1 * fracZ;
   }
   
   // Handle mouse clicks for robot selection
@@ -192,10 +222,24 @@ class TerrainRenderer {
   
   // Add a new robot
   addRobot() {
-    if (!this.robotManager) return null;
+    if (!this.robotManager) {
+      console.error('Robot manager not initialized');
+      return null;
+    }
+    return this.robotManager.addRobot();
+  }
+  
+  // Add a robot at a specific position
+  addRobotAtPosition(x, z) {
+    if (!this.robotManager) {
+      console.error('Robot manager not initialized');
+      return null;
+    }
     
-    const robotId = this.robotManager.createRobot();
-    return this.robotManager.getRobotData(robotId);
+    // Calculate the y position (height) at the given x,z coordinates
+    const y = this.getHeightAtPosition(x, z) + 5; // 5 units above terrain
+    
+    return this.robotManager.addRobot({ x, y, z });
   }
   
   // Get selected robot data
@@ -214,59 +258,135 @@ class TerrainRenderer {
     }
   }
   
+  // Render robot views
+  renderRobotViews() {
+    if (!this.robotManager || !this.robotManager.selectedRobotId) return;
+    
+    // First-person view
+    if (this.robotViewRenderer && this.robotManager.selectedRobotId) {
+      const selectedRobot = this.robotManager.robots[this.robotManager.selectedRobotId];
+      if (!selectedRobot) return;
+      
+      // Update camera position to match robot perspective
+      const robotPos = selectedRobot.position;
+      const robotDir = selectedRobot.direction;
+      
+      // Position camera at robot's eye level
+      this.robotManager.robotCamera.position.set(
+        robotPos.x, 
+        robotPos.y + 3, // Eye level
+        robotPos.z
+      );
+      
+      // Look in the direction the robot is facing
+      this.robotManager.robotCamera.lookAt(
+        robotPos.x + robotDir.x * 10,
+        robotPos.y + 2, // Slightly above horizon
+        robotPos.z + robotDir.z * 10
+      );
+      
+      try {
+        // Render the first-person view
+        this.robotViewRenderer.render(this.scene, this.robotManager.robotCamera);
+      } catch (error) {
+        console.error('Error rendering robot view:', error);
+      }
+    }
+    
+    // Radar view (top-down)
+    if (this.robotRadarRenderer && this.robotManager.selectedRobotId) {
+      const selectedRobot = this.robotManager.robots[this.robotManager.selectedRobotId];
+      if (!selectedRobot) return;
+      
+      // Create a top-down orthographic camera for radar view
+      if (!this.radarCamera) {
+        this.radarCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, 1, 1000);
+      }
+      
+      // Position above the robot
+      const robotPos = selectedRobot.position;
+      this.radarCamera.position.set(
+        robotPos.x, 
+        robotPos.y + 100, 
+        robotPos.z
+      );
+      this.radarCamera.lookAt(robotPos.x, robotPos.y, robotPos.z);
+      
+      try {
+        // Render the radar view
+        this.robotRadarRenderer.render(this.scene, this.radarCamera);
+      } catch (error) {
+        console.error('Error rendering radar view:', error);
+      }
+    }
+  }
+  
   // Set up robot view renderer
   setupRobotViewRenderer(container) {
     // Clean up existing renderer if it exists
     if (this.robotViewRenderer && this.robotViewContainer) {
-      this.robotViewContainer.removeChild(this.robotViewRenderer.domElement);
-      this.robotViewRenderer.dispose();
+      try {
+        this.robotViewContainer.removeChild(this.robotViewRenderer.domElement);
+        this.robotViewRenderer.dispose();
+      } catch (error) {
+        console.error('Error cleaning up robot view renderer:', error);
+      }
       this.robotViewRenderer = null;
     }
     
-    // Create new renderer
-    this.robotViewRenderer = new THREE.WebGLRenderer({ antialias: true });
-    this.robotViewRenderer.setSize(container.clientWidth, container.clientHeight);
-    this.robotViewRenderer.shadowMap.enabled = true;
-    container.appendChild(this.robotViewRenderer.domElement);
-    this.robotViewContainer = container;
+    try {
+      // Create new renderer
+      this.robotViewRenderer = new THREE.WebGLRenderer({ antialias: true });
+      this.robotViewRenderer.setSize(container.clientWidth, container.clientHeight);
+      this.robotViewRenderer.shadowMap.enabled = true;
+      
+      // Clear existing content and add new renderer
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
+      container.appendChild(this.robotViewRenderer.domElement);
+      this.robotViewContainer = container;
+      
+      // Update camera aspect ratio
+      if (this.robotManager && this.robotManager.robotCamera) {
+        this.robotManager.robotCamera.aspect = container.clientWidth / container.clientHeight;
+        this.robotManager.robotCamera.updateProjectionMatrix();
+      }
+      
+      console.log('Robot view renderer set up successfully');
+    } catch (error) {
+      console.error('Error setting up robot view renderer:', error);
+    }
   }
   
   // Set up radar view renderer
   setupRadarRenderer(container) {
     // Clean up existing renderer if it exists
     if (this.robotRadarRenderer && this.robotRadarContainer) {
-      this.robotRadarContainer.removeChild(this.robotRadarRenderer.domElement);
-      this.robotRadarRenderer.dispose();
+      try {
+        this.robotRadarContainer.removeChild(this.robotRadarRenderer.domElement);
+        this.robotRadarRenderer.dispose();
+      } catch (error) {
+        console.error('Error cleaning up radar renderer:', error);
+      }
       this.robotRadarRenderer = null;
     }
     
-    // Create new renderer
-    this.robotRadarRenderer = new THREE.WebGLRenderer({ antialias: true });
-    this.robotRadarRenderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(this.robotRadarRenderer.domElement);
-    this.robotRadarContainer = container;
-  }
-  
-  // Render robot views
-  renderRobotViews() {
-    if (!this.robotManager) return;
-    
-    // First-person view
-    if (this.robotViewRenderer && this.robotManager.selectedRobotId) {
-      this.robotViewRenderer.render(this.scene, this.robotManager.robotCamera);
-    }
-    
-    // Radar view (top-down)
-    if (this.robotRadarRenderer && this.robotManager.selectedRobotId) {
-      const robot = this.robotManager.robots[this.robotManager.selectedRobotId];
-      if (robot) {
-        // Create a top-down orthographic camera for radar view
-        const radarCamera = new THREE.OrthographicCamera(-30, 30, 30, -30, 1, 1000);
-        radarCamera.position.set(robot.position.x, robot.position.y + 50, robot.position.z);
-        radarCamera.lookAt(robot.position.x, robot.position.y, robot.position.z);
-        
-        this.robotRadarRenderer.render(this.scene, radarCamera);
+    try {
+      // Create new renderer
+      this.robotRadarRenderer = new THREE.WebGLRenderer({ antialias: true });
+      this.robotRadarRenderer.setSize(container.clientWidth, container.clientHeight);
+      
+      // Clear existing content and add new renderer
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
       }
+      container.appendChild(this.robotRadarRenderer.domElement);
+      this.robotRadarContainer = container;
+      
+      console.log('Radar renderer set up successfully');
+    } catch (error) {
+      console.error('Error setting up radar renderer:', error);
     }
   }
   
@@ -320,8 +440,10 @@ class TerrainRenderer {
     // Render main view
     this.renderer.render(this.scene, this.camera);
     
-    // Render robot views
-    this.renderRobotViews();
+    // Render robot views if a robot is selected
+    if (this.robotManager && this.robotManager.selectedRobotId) {
+      this.renderRobotViews();
+    }
   }
   
   // Helper methods for zoom

@@ -1,0 +1,115 @@
+.map-view-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.map-view {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+  background-color: #111;
+  cursor: crosshair;
+}
+
+.map-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('../../public/out.png'); /* Using the existing out.png as map background */
+  background-size: cover;
+  background-position: center;
+  opacity: 0.8;
+}
+
+/* If out.png is not suitable, you can use a gradient background as placeholder */
+.map-background.placeholder {
+  background-image: linear-gradient(to bottom right, #1a2a3a, #0a0a15);
+  background-size: 100% 100%;
+}
+
+.robot-container {
+  position: relative;
+  z-index: 10;
+}
+
+.robot-marker {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #ff4444;
+  transform: translate(-50%, -50%);
+  border: 2px solid #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.robot-marker:hover {
+  width: 16px;
+  height: 16px;
+  background-color: #ff6666;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+.robot-marker.selected {
+  background-color: #44ff44;
+  box-shadow: 0 0 10px rgba(68, 255, 68, 0.8);
+}
+
+.map-controls {
+  display: flex;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  align-items: center;
+}
+
+.add-robot-button {
+  background-color: #4455ff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-right: 12px;
+  transition: background-color 0.2s;
+}
+
+.add-robot-button:hover {
+  background-color: #5566ff;
+}
+
+.map-instructions {
+  color: #ccc;
+  font-size: 14px;
+  margin: 0;
+}
+
+.direction-indicator {
+  position: absolute;
+  width: 16px;
+  height: 2px;
+  background-color: white;
+  transform-origin: left center;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.direction-indicator.selected {
+  background-color: #44ff44;
+  height: 3px;
+  opacity: 0.9;
+} 

@@ -55,10 +55,91 @@
   color: #aaa;
 }
 
-.no-selection {
+/* No selection view */
+.no-selection-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.no-selection-message {
   text-align: center;
-  color: #888;
-  padding: 20px 0;
+  color: #ccc;
+  padding: 2rem;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  max-width: 80%;
+}
+
+.no-selection-message h2 {
+  color: #fff;
+  margin-bottom: 1rem;
+}
+
+.no-selection-message p {
+  margin: 0.5rem 0;
+}
+
+/* Make sure the map takes up the full height */
+.map-view-container {
+  height: 100%;
+}
+
+/* Make sure task controls are styled properly */
+.task-controls {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+.task-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.2);
+  color: #fff;
+  margin-right: 8px;
+}
+
+.assign-task {
+  padding: 8px 16px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.assign-task:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+/* Update robot views styling for better visibility */
+.first-person-view, .radar-view {
+  width: 100%;
+  height: 100%;
+  background-color: #111;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Media query for smaller screens */
+@media (max-width: 1200px) {
+  .mars-rover-page {
+    flex-direction: column;
+  }
+  
+  .terrain-panel, .info-panel {
+    width: 100%;
+    height: 50vh;
+  }
 }
 
 /* Robot Views Section */
@@ -82,17 +163,6 @@
   margin-bottom: 10px;
   font-size: 1.1rem;
   color: #4fc3f7;
-}
-
-.first-person-view, .radar-view {
-  width: 100%;
-  height: 150px;
-  background-color: #111;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
 }
 
 .view-placeholder {
@@ -140,46 +210,6 @@
   background-color: #333;
   border-radius: 5px;
   padding: 15px;
-}
-
-.task-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.task-input {
-  padding: 10px;
-  background-color: #444;
-  color: white;
-  border: 1px solid #555;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.task-input:focus {
-  outline: none;
-  border-color: #4fc3f7;
-}
-
-.assign-task {
-  padding: 10px;
-  background-color: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.2s;
-}
-
-.assign-task:hover:not(:disabled) {
-  background-color: #388e3c;
-}
-
-.assign-task:disabled {
-  background-color: #666;
-  cursor: not-allowed;
 }
 
 .no-robot-message {

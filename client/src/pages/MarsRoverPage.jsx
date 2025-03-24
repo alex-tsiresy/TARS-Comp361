@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import TerrainView from '../components/TerrainView';
+import MapView from '../components/MapView';
 import '../styles/MarsRoverPage.css';
+import terrainManager from '../utils/TerrainManager';
 
 const MarsRoverPage = () => {
   const [selectedRobot, setSelectedRobot] = useState(null);
@@ -12,7 +13,27 @@ const MarsRoverPage = () => {
   // Handle robot selection
   const handleRobotSelected = (robot) => {
     setSelectedRobot(robot);
+    
+    // If we have a renderer, tell it to select this robot
+    if (renderer && robot) {
+      renderer.robotManager.selectRobot(robot.id);
+    }
   };
+  
+  // Initialize renderer from TerrainManager
+  useEffect(() => {
+    const handleRendererInitialized = (event) => {
+      const { renderer: newRenderer } = event.detail;
+      console.log('Renderer initialized in MarsRoverPage from TerrainManager');
+      setRenderer(newRenderer);
+    };
+    
+    window.addEventListener('rendererInitialized', handleRendererInitialized);
+    
+    return () => {
+      window.removeEventListener('rendererInitialized', handleRendererInitialized);
+    };
+  }, []);
   
   // Listen for robot updates
   useEffect(() => {
@@ -45,30 +66,7 @@ const MarsRoverPage = () => {
     
     // Only set up renderers if all dependencies are available
     setupRenderers();
-    
-    // Clean up renderer on unmount
-    return () => {
-      if (renderer) {
-        console.log('Cleaning up renderer from MarsRoverPage');
-        try {
-          // First set to null in parent to prevent further access
-          setRenderer(null);
-          // Then dispose
-          renderer.dispose();
-        } catch (error) {
-          console.error('Error disposing renderer:', error);
-        }
-      }
-    };
   }, [renderer, firstPersonViewRef, radarViewRef]);
-  
-  // Handle renderer initialization
-  const handleRendererInitialized = (newRenderer) => {
-    console.log('Renderer initialized in MarsRoverPage');
-    if (newRenderer && !renderer) {
-      setRenderer(newRenderer);
-    }
-  };
   
   // Handle task assignment
   const handleAssignTask = () => {
@@ -85,86 +83,80 @@ const MarsRoverPage = () => {
   return (
     <div className="mars-rover-page">
       <div className="terrain-panel">
-        <TerrainView 
+        <MapView 
           onRobotSelected={handleRobotSelected}
-          onRendererInitialized={handleRendererInitialized}
         />
       </div>
       
       <div className="info-panel">
-        <div className="robot-details">
-          <h2>Robot Details</h2>
-          {selectedRobot ? (
-            <div className="detail-content">
-              <p><span>ID:</span> {selectedRobot.id.substring(0, 8)}</p>
-              <p><span>Position:</span> X: {selectedRobot.position.x}, 
-                                Z: {selectedRobot.position.z}</p>
-              <p><span>Height:</span> {selectedRobot.height}m</p>
-              <p><span>Coordinates:</span> {selectedRobot.coordinates.x}, {selectedRobot.coordinates.z}</p>
-              <p><span>Task:</span> {selectedRobot.task}</p>
+        {selectedRobot ? (
+          <>
+            <div className="robot-details">
+              <h2>Robot Details</h2>
+              <div className="detail-content">
+                <p><span>ID:</span> {selectedRobot.id.substring(0, 8)}</p>
+                <p><span>Position:</span> X: {selectedRobot.position.x.toFixed(2)}, 
+                                  Z: {selectedRobot.position.z.toFixed(2)}</p>
+                <p><span>Height:</span> {selectedRobot.height ? selectedRobot.height.toFixed(2) : '0'}m</p>
+                <p><span>Coordinates:</span> {selectedRobot.coordinates ? 
+                  `${selectedRobot.coordinates.x.toFixed(2)}, ${selectedRobot.coordinates.z.toFixed(2)}` : 
+                  'N/A'}</p>
+                <p><span>Task:</span> {selectedRobot.task || 'No task assigned'}</p>
+              </div>
             </div>
-          ) : (
-            <div className="no-selection">
-              <p>No robot selected</p>
-              <p>Click on a robot to view details</p>
-            </div>
-          )}
-        </div>
-        
-        <div className="robot-views">
-          <div className="view-container">
-            <h3>First Person View</h3>
-            <div 
-              className="first-person-view" 
-              ref={firstPersonViewRef}
-            >
-              {!selectedRobot && (
-                <div className="view-placeholder">Select a robot to see its view</div>
-              )}
-            </div>
-          </div>
-          
-          <div className="view-container">
-            <h3>Radar View</h3>
-            <div 
-              className="radar-view" 
-              ref={radarViewRef}
-            >
-              {!selectedRobot && (
-                <div className="radar-placeholder">
-                  <div className="radar-circle"></div>
-                  <div className="radar-circle"></div>
-                  <div className="radar-circle"></div>
+            
+            <div className="robot-views">
+              <div className="view-container">
+                <h3>First Person View</h3>
+                <div 
+                  className="first-person-view" 
+                  ref={firstPersonViewRef}
+                  style={{ height: '120px', backgroundColor: '#111' }}
+                >
+                  {/* The 3D renderer will be attached here */}
                 </div>
-              )}
+              </div>
+              
+              <div className="view-container">
+                <h3>Radar View</h3>
+                <div 
+                  className="radar-view" 
+                  ref={radarViewRef}
+                  style={{ height: '120px', backgroundColor: '#111' }}
+                >
+                  {/* The 3D renderer will be attached here */}
+                </div>
+              </div>
+            </div>
+            
+            <div className="control-panel">
+              <div className="task-controls">
+                <input
+                  type="text"
+                  value={taskInput}
+                  onChange={(e) => setTaskInput(e.target.value)}
+                  placeholder="Enter task description..."
+                  className="task-input"
+                />
+                <button 
+                  className="assign-task"
+                  onClick={handleAssignTask}
+                  disabled={!taskInput}
+                >
+                  Assign Task
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="no-selection-view">
+            <div className="no-selection-message">
+              <h2>No Robot Selected</h2>
+              <p>Click on a robot on the map to view details and control it.</p>
+              <p>If there are no robots yet, click on the map to add one.</p>
             </div>
           </div>
-        </div>
-        
-        <div className="control-panel">
-          {selectedRobot ? (
-            <div className="task-controls">
-              <input
-                type="text"
-                value={taskInput}
-                onChange={(e) => setTaskInput(e.target.value)}
-                placeholder="Enter task description..."
-                className="task-input"
-              />
-              <button 
-                className="assign-task"
-                onClick={handleAssignTask}
-                disabled={!taskInput}
-              >
-                Assign Task
-              </button>
-            </div>
-          ) : (
-            <div className="no-robot-message">
-              Select a robot to assign tasks
-            </div>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );

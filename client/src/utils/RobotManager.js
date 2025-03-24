@@ -6,6 +6,7 @@ class RobotManager {
     this.terrainRenderer = terrainRenderer;
     this.robots = {};
     this.selectedRobotId = null;
+    this.lastUpdateTime = {};
     
     // Materials for robots
     this.robotMaterial = new THREE.MeshStandardMaterial({ 
@@ -50,30 +51,55 @@ class RobotManager {
     mesh.castShadow = true;
     mesh.userData.robotId = id; // Store ID in the mesh for picking
     
-    // Add robot to scene
+    // Add to scene
     this.scene.add(mesh);
     
     // Store robot data
     this.robots[id] = {
       id,
       mesh,
-      position,
-      direction: new THREE.Vector3(1, 0, 0), // Default direction
+      position: { ...position },
+      height: position.y,
+      task: '',
+      coordinates: {
+        x: position.x,
+        z: position.z
+      },
+      // Add missing properties for robot movement/direction
+      direction: new THREE.Vector3(1, 0, 0), // Default direction - facing positive X
       speed: 0.5, // Default speed
-      task: 'Idle',
-      lastUpdate: Date.now(),
       moveTimer: 0,
-      moveInterval: Math.random() * 5000 + 2000 // Random interval for movement changes
+      moveInterval: Math.random() * 5000 + 2000, // Random interval for movement changes
+      selected: false
     };
     
+    // Dispatch an event to notify about the new robot
+    const robotAddedEvent = new CustomEvent('robotAdded', {
+      detail: { robot: this.getRobotData(id) }
+    });
+    window.dispatchEvent(robotAddedEvent);
+    
     return id;
+  }
+  
+  // Public method to add a robot
+  addRobot(position) {
+    const id = this.createRobot(position);
+    const robotData = this.getRobotData(id);
+    
+    // Select the newly added robot
+    this.selectRobot(id);
+    
+    return robotData;
   }
   
   // Select a robot
   selectRobot(robotId) {
     // Deselect previous robot
     if (this.selectedRobotId && this.robots[this.selectedRobotId]) {
-      this.robots[this.selectedRobotId].mesh.material = this.robotMaterial;
+      const prevRobot = this.robots[this.selectedRobotId];
+      prevRobot.mesh.material = this.robotMaterial;
+      prevRobot.selected = false;
     }
     
     this.selectedRobotId = robotId;
@@ -82,6 +108,7 @@ class RobotManager {
     if (robotId && this.robots[robotId]) {
       const robot = this.robots[robotId];
       robot.mesh.material = this.selectedRobotMaterial;
+      robot.selected = true;
       
       // Position the robot camera
       const pos = robot.position;
@@ -92,8 +119,10 @@ class RobotManager {
         pos.z + robot.direction.z * 10
       );
       
-      // Make camera helper visible
+      // Make camera helper visible for debugging
       this.robotCameraHelper.visible = true;
+      
+      console.log(`Selected robot ${robotId.substring(0, 8)} at position`, pos);
       
       // Dispatch event for UI
       const event = new CustomEvent('robotSelected', { detail: { robot: this.getRobotData(robotId) } });
@@ -138,6 +167,9 @@ class RobotManager {
   
   // Update all robots
   update(deltaTime) {
+    const currentTime = Date.now();
+    const updateInterval = 100; // Only send updates every 100ms to prevent flooding
+    
     Object.values(this.robots).forEach(robot => {
       // Random movement logic
       robot.moveTimer += deltaTime;
@@ -172,6 +204,17 @@ class RobotManager {
       
       // Update mesh position
       robot.mesh.position.set(clampedX, terrainHeight + 5, clampedZ);
+      
+      // Notify about robot position update, but throttle to avoid too many events
+      const lastUpdate = this.lastUpdateTime[robot.id] || 0;
+      if (currentTime - lastUpdate > updateInterval) {
+        this.lastUpdateTime[robot.id] = currentTime;
+        
+        const robotUpdatedEvent = new CustomEvent('robotUpdated', {
+          detail: { robot: this.getRobotData(robot.id) }
+        });
+        window.dispatchEvent(robotUpdatedEvent);
+      }
     });
     
     // Update selected robot camera
@@ -199,16 +242,23 @@ class RobotManager {
     return {
       id: robot.id,
       position: {
-        x: Math.round(robot.position.x),
-        y: Math.round(robot.position.y),
-        z: Math.round(robot.position.z)
+        x: Math.round(robot.position.x * 100) / 100, // Round to 2 decimal places
+        y: Math.round(robot.position.y * 100) / 100,
+        z: Math.round(robot.position.z * 100) / 100
+      },
+      direction: {
+        x: robot.direction.x,
+        y: robot.direction.y,
+        z: robot.direction.z
       },
       task: robot.task,
+      speed: robot.speed,
       coordinates: {
         x: Math.round(robot.position.x + 1000), // Convert to 0-2000 range for UI
         z: Math.round(robot.position.z + 1000)
       },
-      height: Math.round(robot.position.y - 5) // Actual terrain height
+      height: Math.round(robot.position.y - 5), // Actual terrain height
+      selected: robot.id === this.selectedRobotId
     };
   }
   
