@@ -272,6 +272,23 @@ class TerrainExplorer {
     }
     return null;
   }
+  
+  // Set task for a robot (for compatibility)
+  setRobotTask(robotId, task) {
+    if (this.robotManager && robotId && this.robotManager.robots[robotId]) {
+      this.robotManager.robots[robotId].task = task;
+      
+      // Dispatch a robot updated event
+      const robot = this.robotManager.robots[robotId];
+      const event = new CustomEvent('robotUpdated', {
+        detail: { robot }
+      });
+      window.dispatchEvent(event);
+      
+      return true;
+    }
+    return false;
+  }
 }
 
 export { TerrainExplorer };

@@ -125,43 +125,39 @@ const MapView = ({ onRobotSelected }) => {
 
   return (
     <div className="map-view-container">
-      <div 
-        className="map-view" 
-        ref={mapRef} 
-        onClick={handleMapClick}
-      >
-        {/* Map background image */}
-        <div className="map-background"></div>
-        
-        {/* Plot robot markers */}
-        {robots.map(robot => {
-          const { x, y } = terrainToMapCoords(robot.position.x, robot.position.z);
-          const isSelected = robot.id === selectedRobotId;
-          
-          return (
-            <div key={robot.id} className="robot-container">
-              <div 
-                className={`robot-marker ${isSelected ? 'selected' : ''}`}
-                style={{ 
-                  left: `${x}px`, 
-                  top: `${y}px`,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRobotClick(robot);
-                }}
-                title={`Robot ${robot.id.substring(0, 8)}${isSelected ? ' (Selected)' : ''}`}
-              />
-            </div>
-          );
-        })}
-      </div>
-      
       <div className="map-controls">
-        <button className="add-robot-button" onClick={() => handleMapClick()} title="Add Robot">
-          🤖
-        </button>
-        <p className="map-instructions">Click anywhere on the map to add a robot</p>
+        <div className="add-robot-button" onClick={handleMapClick}>
+          +
+          <div className="add-robot-tooltip">Add new robot</div>
+        </div>
+        <p className="map-instructions">Click anywhere on the map to add a robot. Click on a robot to select it.</p>
+      </div>
+      <div className="map-view" ref={mapRef} onClick={handleMapClick}>
+        <div className="map-background"></div>
+        <div className="robot-container">
+          {robots.map(robot => {
+            const { x, y } = terrainToMapCoords(robot.position.x, robot.position.z);
+            const isSelected = robot.id === selectedRobotId;
+            
+            return (
+              <div key={robot.id} className="robot-container">
+                <div 
+                  className={`robot-marker ${isSelected ? 'selected' : ''}`}
+                  style={{ 
+                    left: `${x}px`, 
+                    top: `${y}px`,
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRobotClick(robot);
+                  }}
+                  title={`Robot ${robot.id.substring(0, 8)}${isSelected ? ' (Selected)' : ''}`}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <div className="map-axes" title="Coordinate system orientation"></div>
       </div>
     </div>
   );
