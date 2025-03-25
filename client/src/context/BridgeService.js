@@ -12,6 +12,8 @@ class BridgeService {
     this._contextActions = null;
     this._eventListeners = new Map();
     this._migratedToDirectMode = true;
+    this._terrainManager = null;
+    this._pendingOperations = [];
   }
   
   /**
@@ -218,6 +220,32 @@ class BridgeService {
         console.log('Restored original event dispatch behavior.');
       }
     };
+  }
+  
+  /**
+   * Called by the UI to set a robot task
+   */
+  setRobotTask(robotId, task) {
+    if (this._terrainManager && this._terrainManager.renderer) {
+      this._terrainManager.renderer.setRobotTask(robotId, task);
+      return true;
+    }
+    // Queue for when terrainManager is ready
+    this._pendingOperations.push(() => this.setRobotTask(robotId, task));
+    return false;
+  }
+  
+  /**
+   * Called by the UI to set robot capabilities
+   */
+  setRobotCapabilities(robotId, capabilities) {
+    if (this._terrainManager && this._terrainManager.renderer) {
+      this._terrainManager.renderer.setRobotCapabilities(robotId, capabilities);
+      return true;
+    }
+    // Queue for when terrainManager is ready
+    this._pendingOperations.push(() => this.setRobotCapabilities(robotId, capabilities));
+    return false;
   }
 }
 

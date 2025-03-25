@@ -159,6 +159,13 @@ class TerrainRenderer {
   }
   
   /**
+   * Public method for handling resize (can be called from outside)
+   */
+  handleResize() {
+    this.onWindowResize();
+  }
+  
+  /**
    * Handle click events for robot selection
    */
   handleClick(event) {
@@ -362,6 +369,15 @@ class TerrainRenderer {
   setRobotTask(robotId, task) {
     if (this.robotManager) {
       this.robotManager.setRobotTask(robotId, task);
+    }
+  }
+  
+  /**
+   * Set robot capabilities
+   */
+  setRobotCapabilities(robotId, capabilities) {
+    if (this.robotManager) {
+      this.robotManager.setRobotCapabilities(robotId, capabilities);
     }
   }
   

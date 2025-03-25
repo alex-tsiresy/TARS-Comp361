@@ -12,7 +12,8 @@ const actions = {
   UPDATE_ROBOT: 'UPDATE_ROBOT',
   SELECT_ROBOT: 'SELECT_ROBOT',
   SET_ROBOT_TASK: 'SET_ROBOT_TASK',
-  SET_RENDERER: 'SET_RENDERER'
+  SET_RENDERER: 'SET_RENDERER',
+  SET_ROBOT_CAPABILITIES: 'SET_ROBOT_CAPABILITIES'
 };
 
 // Initial state
@@ -48,6 +49,15 @@ function robotReducer(state, action) {
       
       case actions.SET_RENDERER:
         draft.renderer = action.payload;
+        break;
+        
+      case actions.SET_ROBOT_CAPABILITIES:
+        if (draft.robots[action.payload.robotId]) {
+          draft.robots[action.payload.robotId].capabilities = {
+            ...draft.robots[action.payload.robotId].capabilities,
+            ...action.payload.capabilities
+          };
+        }
         break;
     }
   });
@@ -206,6 +216,18 @@ export const RobotProvider = ({ children }) => {
     }
   }, [state.renderer]);
   
+  const setRobotCapabilities = useCallback((robotId, capabilities) => {
+    dispatch({
+      type: actions.SET_ROBOT_CAPABILITIES,
+      payload: { robotId, capabilities }
+    });
+    
+    // Sync with 3D world
+    if (state.renderer && state.renderer.robotManager) {
+      state.renderer.robotManager.setRobotCapabilities(robotId, capabilities);
+    }
+  }, [state.renderer]);
+  
   // Context value
   const contextValue = {
     robots: robotList,
@@ -217,7 +239,8 @@ export const RobotProvider = ({ children }) => {
     // Actions
     addRobotAtPosition,
     selectRobot,
-    setRobotTask
+    setRobotTask,
+    setRobotCapabilities
   };
   
   return (

@@ -77,6 +77,8 @@ TerrainManager (Singleton)
    TerrainExplorer
     ↙️   ↓    ↘️    ↘️
 CameraCtrl  InputHandler  RobotMgr  TerrainObjs
+                           ↙️  ↘️
+                RobotBehaviors  RobotMovement
                             ↓
                         RobotViewMgr
 ```
@@ -134,6 +136,8 @@ client/
 │       ├── TerrainManager.js # Hidden 3D renderer manager
 │       ├── TerrainExplorer.js # Core simulation class
 │       ├── RobotManager.js # Robot creation and control
+│       ├── RobotBehaviors.js # Robot behaviors implementation
+│       ├── RobotMovement.js # Robot movement and physics
 │       ├── RobotViewManager.js # Robot camera views
 │       ├── InputHandler.js # User input processing
 │       └── CameraController.js # Camera management
@@ -166,7 +170,15 @@ client/
 │  RobotManager   │ │CameraCtrl   │ │TerrainObjectManager │
 └────────┬────────┘ └─────────────┘ └─────────────────────┘
          │
-         ▼
+      ┌──┴───┐
+      │      │
+      ▼      ▼
+┌────────┐ ┌────────┐
+│Behaviors│ │Movement│
+└────┬────┘ └───┬────┘
+     │          │
+     └────┬─────┘
+          ▼
 ┌─────────────────┐
 │ RobotViewManager│
 └─────────────────┘
@@ -176,7 +188,9 @@ Key classes include:
 
 - **TerrainManager**: Singleton that initializes the hidden 3D renderer
 - **TerrainExplorer**: Core simulation class that handles terrain generation and rendering
-- **RobotManager**: Manages robot creation, selection and movement
+- **RobotManager**: Manages robot creation, selection and core functionality
+- **RobotBehaviors**: Implements different robot behaviors (patrol, search, etc.)
+- **RobotMovement**: Handles robot movement physics and smooth transitions
 - **RobotViewManager**: Handles robot camera views (first-person and radar)
 - **CameraController**: Manages camera movement and controls
 - **TerrainObjectManager**: Manages terrain features like rocks, dust and other objects
@@ -218,9 +232,19 @@ Users can assign textual tasks to robots, which are:
 - Displayed in the UI
 - Persisted as the robot moves around the terrain
 
+### Modular Robot Behaviors
+
+The application implements various robot behaviors in a modular way:
+- Random movement with smooth transitions
+- Patrol patterns along predefined paths
+- Object search capabilities
+- Point-to-point navigation
+- Path following
+
 ## Best Practices
 
 1. **Use the Context API**: Access state through the `useRobots()` hook
 2. **Follow the Bridge Pattern**: For 3D world communication, use BridgeService
 3. **Maintain Immutability**: Let Immer handle state updates
 4. **Component Composition**: Break large components into smaller, focused ones
+5. **Modular Architecture**: Separate concerns into focused classes (behaviors, movement, etc.)
