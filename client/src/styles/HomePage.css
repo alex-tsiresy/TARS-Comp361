@@ -3,3 +3,320 @@
 .homepage {
   gap: 20px;
 }
+
+/* Futuristic Black and Yellow Mars Rover Landing Page */
+
+.homepage-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  height: 100vh;
+  width: 100%;
+  background-color: #0a0a0a;
+  color: #f2d024;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+}
+
+/* Star field background effect */
+.starfield {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(2px 2px at 20px 30px, #ffd700, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 40px 70px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 50px 160px, #ffd700, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 130px 80px, #ffd700, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  animation: starfield-animation 100s linear infinite;
+  opacity: 0.4;
+  z-index: 0;
+}
+
+@keyframes starfield-animation {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(200px);
+  }
+}
+
+/* Mission status indicator */
+.mission-status {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  letter-spacing: 2px;
+  z-index: 10;
+  text-align: left;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  background-color: #00ff4c;
+  border-radius: 50%;
+  margin-right: 10px;
+  box-shadow: 0 0 10px #00ff4c;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 5px #00ff4c;
+  }
+  50% {
+    box-shadow: 0 0 20px #00ff4c;
+  }
+  100% {
+    box-shadow: 0 0 5px #00ff4c;
+  }
+}
+
+/* Glitch effect for title */
+.glitch-container {
+  margin-top: 10vh;
+  text-align: center;
+  z-index: 2;
+}
+
+.glitch-text {
+  font-size: 4.5rem;
+  margin: 0;
+  letter-spacing: 6px;
+  position: relative;
+  text-shadow: 
+    0 0 5px rgba(255, 208, 0, 0.7),
+    0 0 10px rgba(255, 208, 0, 0.5),
+    0 0 15px rgba(255, 208, 0, 0.3);
+  animation: glitch 5s infinite;
+}
+
+@keyframes glitch {
+  0%, 80%, 100% {
+    transform: none;
+    opacity: 1;
+  }
+  77% {
+    transform: skew(0.5deg, 0.9deg);
+    opacity: 0.75;
+  }
+  78% {
+    transform: skew(-1deg, -0.1deg);
+    opacity: 0.9;
+  }
+  79% {
+    transform: skew(0.5deg, -0.5deg);
+    opacity: 0.75;
+  }
+}
+
+.subtitle {
+  font-size: 1.5rem;
+  margin-top: 5px;
+  letter-spacing: 3px;
+  opacity: 0.8;
+}
+
+/* Control panel section */
+.control-panel {
+  width: 100%;
+  max-width: 600px;
+  padding: 30px 20px;
+  z-index: 2;
+  background: rgba(10, 10, 10, 0.8);
+  border: 1px solid rgba(242, 208, 36, 0.2);
+  border-radius: 5px;
+  box-shadow: 0 0 40px rgba(242, 208, 36, 0.1);
+  backdrop-filter: blur(5px);
+}
+
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.control-button {
+  display: flex;
+  align-items: center;
+  background-color: #13130b;
+  color: #f2d024;
+  border: 1px solid #f2d024;
+  border-radius: 3px;
+  padding: 12px 20px;
+  font-size: 16px;
+  text-decoration: none;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+}
+
+.control-button:hover {
+  background-color: rgba(242, 208, 36, 0.15);
+  box-shadow: 0 0 15px rgba(242, 208, 36, 0.4);
+  transform: translateY(-2px);
+}
+
+.control-button:active {
+  transform: translateY(1px);
+}
+
+.button-icon {
+  margin-right: 15px;
+  font-size: 18px;
+}
+
+.button-text {
+  font-weight: bold;
+}
+
+.main-button {
+  background-color: rgba(242, 208, 36, 0.15);
+  border-width: 2px;
+}
+
+/* Login modal */
+.login-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  backdrop-filter: blur(5px);
+}
+
+.login-content {
+  background-color: #131313;
+  border: 2px solid #f2d024;
+  border-radius: 5px;
+  width: 90%;
+  max-width: 400px;
+  padding: 20px;
+  box-shadow: 0 0 40px rgba(242, 208, 36, 0.2);
+  position: relative;
+  text-align: left;
+}
+
+.login-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(242, 208, 36, 0.2);
+}
+
+.login-header h3 {
+  margin: 0;
+  letter-spacing: 2px;
+  font-size: 1.2rem;
+  text-align: left;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #f2d024;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 0.8;
+}
+
+.input-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  text-align: left;
+}
+
+.input-group input {
+  width: 100%;
+  background-color: #0a0a0a;
+  border: 1px solid rgba(242, 208, 36, 0.4);
+  padding: 10px;
+  color: #f2d024;
+  font-family: 'Courier New', monospace;
+  outline: none;
+  text-align: left;
+}
+
+.input-group input:focus {
+  border-color: #f2d024;
+  box-shadow: 0 0 5px rgba(242, 208, 36, 0.5);
+}
+
+.login-button {
+  width: 100%;
+  background-color: rgba(242, 208, 36, 0.1);
+  color: #f2d024;
+  border: 1px solid #f2d024;
+  padding: 12px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+}
+
+.login-button:hover {
+  background-color: rgba(242, 208, 36, 0.2);
+  box-shadow: 0 0 15px rgba(242, 208, 36, 0.3);
+}
+
+/* Footer with coordinates */
+.coordinates-footer {
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  padding: 15px 0;
+  background-color: rgba(10, 10, 10, 0.7);
+  border-top: 1px solid rgba(242, 208, 36, 0.1);
+  font-size: 0.8rem;
+  letter-spacing: 2px;
+  z-index: 2;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .glitch-text {
+    font-size: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 1.2rem;
+  }
+  
+  .coordinates-footer {
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+}
