@@ -27,6 +27,12 @@ class RobotBehaviors {
       case 'findRocks':
         this.applyFindRocksBehavior(robot, deltaTime);
         break;
+      case 'findWater':
+        this.applyFindWaterBehavior(robot, deltaTime);
+        break;
+      case 'findFlatSurface':
+        this.applyFindFlatSurfaceBehavior(robot, deltaTime);
+        break;
       case 'standby':
         // Do nothing, robot stays in place
         robot.speed = 0;
@@ -213,6 +219,165 @@ class RobotBehaviors {
         } else {
           // No rock found, continue searching immediately
           robot.behaviorState.targetPosition = null;
+        }
+      }
+    }
+  }
+  // Find water behavior - simulates searching for water sources
+  applyFindWaterBehavior(robot, deltaTime) {
+    // Check if we have a target water position
+    if (!robot.behaviorState.targetPosition) {
+      // If we need to think, find a potential water location
+      if (robot.behaviorState.thinkTime > 500) { // Quick decision making for water search
+        robot.behaviorState.thinkTime = 0;
+        
+        // Water is often found in lower elevations, so bias search toward downhill directions
+        const currentAngle = Math.atan2(robot.direction.z, robot.direction.x);
+        
+        // Use wider angle variations for water search (water can be anywhere)
+        const searchAngleVariation = (Math.random() * 2 - 1) * Math.PI / 2; // +-90 degrees
+        const searchAngle = currentAngle + searchAngleVariation;
+        
+        // Use variable search distances with preference for nearby water sources
+        const minDistance = robot.capabilities.sensorRange * 0.5; // Closer search for water
+        const maxDistance = robot.capabilities.sensorRange * 1.0; // Stay within sensor range
+        const searchDistance = minDistance + Math.random() * (maxDistance - minDistance);
+        
+        robot.behaviorState.targetPosition = {
+          x: robot.position.x + Math.cos(searchAngle) * searchDistance,
+          z: robot.position.z + Math.sin(searchAngle) * searchDistance
+        };
+        
+        // Set moderate speed for careful water searching
+        robot.targetSpeed = robot.capabilities.maxSpeed * 0.85; // Slightly slower for careful searching
+      } else {
+        // While "thinking", move in a meandering pattern to simulate looking for water
+        robot.targetSpeed = robot.capabilities.maxSpeed * 0.7;
+        
+        // Slight zigzag movement to simulate searching for water
+        const zigzagFactor = Math.sin(robot.behaviorState.thinkTime * 0.01) * 0.3;
+        const forwardVector = {
+          x: robot.direction.x,
+          z: robot.direction.z
+        };
+        const sideVector = {
+          x: -robot.direction.z,
+          z: robot.direction.x
+        };
+        
+        robot.position.x += (forwardVector.x + sideVector.x * zigzagFactor) * robot.speed;
+        robot.position.z += (forwardVector.z + sideVector.z * zigzagFactor) * robot.speed;
+      }
+    } else {
+      // Move toward the target position with moderate speed (careful approach to water)
+      robot.targetSpeed = robot.capabilities.maxSpeed * 0.85;
+      this.robotManager.movement.moveTowardPoint(robot, robot.behaviorState.targetPosition, deltaTime);
+      
+      // Check if we've reached the target
+      const distanceToTarget = this._distanceToTarget(robot, robot.behaviorState.targetPosition);
+      
+      if (distanceToTarget < 12) {
+        // Simulate a chance of finding water
+        const foundWater = Math.random() < 0.35; // 35% chance to find water
+        
+        if (foundWater) {
+          // Examine the water source, then continue
+          robot.targetSpeed = 0;
+          setTimeout(() => {
+            if (robot && robot.behaviorGoal === 'findWater') {
+              robot.behaviorState.targetPosition = null;
+              robot.targetSpeed = robot.capabilities.maxSpeed * 0.8;
+            }
+          }, 700); // Longer examination time for water analysis
+        } else {
+          // No water found, continue searching after a brief pause
+          robot.targetSpeed = robot.capabilities.maxSpeed * 0.4; // Slow down briefly
+          setTimeout(() => {
+            if (robot && robot.behaviorGoal === 'findWater') {
+              robot.behaviorState.targetPosition = null;
+            }
+          }, 300); // Brief pause before continuing search
+        }
+      }
+    }
+  }
+  
+  // Find flat surface behavior - simulates searching for suitable landing or construction areas
+  applyFindFlatSurfaceBehavior(robot, deltaTime) {
+    // Check if we have a target flat surface position
+    if (!robot.behaviorState.targetPosition) {
+      // If we need to think, find a potential flat area
+      if (robot.behaviorState.thinkTime > 450) { // Quick decisions for flat surface search
+        robot.behaviorState.thinkTime = 0;
+        
+        // Flat surfaces are more likely to be found in open areas
+        // Use a more methodical search pattern with grid-like movement
+        
+        // Create a spiral search pattern
+        const spiralAngle = robot.behaviorState.searchIterations || 0;
+        const spiralRadius = 50 + (robot.behaviorState.searchIterations || 0) * 15;
+        
+        // Increment search iteration counter
+        robot.behaviorState.searchIterations = (robot.behaviorState.searchIterations || 0) + 1;
+        if (robot.behaviorState.searchIterations > 12) {
+          robot.behaviorState.searchIterations = 0; // Reset after completing a full search
+        }
+        
+        // Calculate position in spiral pattern
+        robot.behaviorState.targetPosition = {
+          x: robot.position.x + Math.cos(spiralAngle) * spiralRadius,
+          z: robot.position.z + Math.sin(spiralAngle) * spiralRadius
+        };
+        
+        // Set efficient speed for methodical searching
+        robot.targetSpeed = robot.capabilities.maxSpeed * 0.9;
+      } else {
+        // While "thinking", move in a straight line to efficiently cover ground
+        robot.targetSpeed = robot.capabilities.maxSpeed * 0.8;
+        
+        // Move forward in current direction with slight scanning motion
+        const scanFactor = Math.sin(robot.behaviorState.thinkTime * 0.005) * 0.1;
+        robot.position.x += robot.direction.x * robot.speed;
+        robot.position.z += robot.direction.z * robot.speed;
+        
+        // Slightly adjust direction to scan the terrain
+        const currentAngle = Math.atan2(robot.direction.z, robot.direction.x);
+        const scanAngle = currentAngle + scanFactor;
+        robot.direction.x = Math.cos(scanAngle);
+        robot.direction.z = Math.sin(scanAngle);
+      }
+    } else {
+      // Move toward the target position with high efficiency
+      robot.targetSpeed = robot.capabilities.maxSpeed * 0.95;
+      this.robotManager.movement.moveTowardPoint(robot, robot.behaviorState.targetPosition, deltaTime);
+      
+      // Check if we've reached the target
+      const distanceToTarget = this._distanceToTarget(robot, robot.behaviorState.targetPosition);
+      
+      if (distanceToTarget < 15) {
+        // Simulate analyzing the surface
+        const foundFlatSurface = Math.random() < 0.4; // 40% chance to find suitable flat surface
+        
+        if (foundFlatSurface) {
+          // Analyze the flat surface thoroughly
+          robot.targetSpeed = 0;
+          
+          // Simulate a scanning pattern
+          const scanDuration = 800; // Longer scan for detailed surface analysis
+          setTimeout(() => {
+            if (robot && robot.behaviorGoal === 'findFlatSurface') {
+              robot.behaviorState.targetPosition = null;
+              robot.targetSpeed = robot.capabilities.maxSpeed * 0.9;
+            }
+          }, scanDuration);
+        } else {
+          // Not flat enough, continue searching immediately
+          robot.behaviorState.targetPosition = null;
+          
+          // Reset search iterations occasionally to avoid getting stuck in a pattern
+          if (Math.random() < 0.3) {
+            robot.behaviorState.searchIterations = 0;
+          }
         }
       }
     }
