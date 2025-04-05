@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Removed useRef, added useCallback
 import MapView from '../components/MapView';
 import '../styles/MarsRoverPage.css';
 import { useRobots } from '../context/RobotContext';
@@ -9,9 +9,23 @@ const MarsRoverPage = () => {
   const [sensorRangeInput, setSensorRangeInput] = useState('100');
   const [turnRateInput, setTurnRateInput] = useState('0.05');
   const [batteryCapacityInput, setBatteryCapacityInput] = useState('100');
-  const firstPersonViewRef = useRef(null);
-  const radarViewRef = useRef(null);
-  
+  // Use state and callback refs instead of useRef
+  const [firstPersonViewElement, setFirstPersonViewElement] = useState(null);
+  const [radarViewElement, setRadarViewElement] = useState(null);
+
+  // Callback refs to capture the DOM elements
+  const firstPersonViewRefCallback = useCallback(node => {
+    if (node !== null) {
+      setFirstPersonViewElement(node);
+    }
+  }, []);
+
+  const radarViewRefCallback = useCallback(node => {
+    if (node !== null) {
+      setRadarViewElement(node);
+    }
+  }, []);
+
   // Get state and actions from context
   const { 
     selectedRobot, 
@@ -20,19 +34,21 @@ const MarsRoverPage = () => {
     setRobotCapabilities
   } = useRobots();
 
-  // Effect to set up the robot view renderers once the main renderer is available
+  // Effect to set up the robot view renderers once the main renderer AND elements are available
   useEffect(() => {
-    // Wait until renderer and refs are available
-    if (!renderer || !firstPersonViewRef.current || !radarViewRef.current) {
+    // Wait until renderer and elements are available
+    if (!renderer || !firstPersonViewElement || !radarViewElement) {
+      console.log('Renderer or view elements not ready yet.'); // Debug log
       return;
     }
-    
+
+    console.log('Renderer and elements ready, setting up views.'); // Debug log
     let resizeTimer = null;
     try {
       console.log('Setting up robot view renderers and initial resize');
-      // Setup both renderers
-      renderer.setupRobotViewRenderer(firstPersonViewRef.current);
-      renderer.setupRadarRenderer(radarViewRef.current);
+      // Setup both renderers using the state elements
+      renderer.setupRobotViewRenderer(firstPersonViewElement);
+      renderer.setupRadarRenderer(radarViewElement);
 
       // Force initial resize after setup to ensure renderers fit containers
       if (renderer.handleResize) {
@@ -57,9 +73,10 @@ const MarsRoverPage = () => {
         clearTimeout(resizeTimer);
       }
     };
-  }, [renderer]); // This effect runs only when the renderer instance changes
+    // Depend on renderer and the elements themselves
+  }, [renderer, firstPersonViewElement, radarViewElement]);
 
-  // Effect to handle ongoing window resizing for the renderers
+  // Effect to handle ongoing window resizing for the renderers (no change needed here)
   useEffect(() => {
     // Only run if renderer exists
     if (!renderer) {
@@ -209,9 +226,9 @@ const MarsRoverPage = () => {
             <div className="robot-views">
               <div className="view-container">
                 <h3>First Person View</h3>
-                <div 
-                  className="first-person-view" 
-                  ref={firstPersonViewRef}
+                <div
+                  className="first-person-view"
+                  ref={firstPersonViewRefCallback} // Use callback ref
                 >
                   {/* The 3D renderer will be attached here */}
                   <div className="view-label">
@@ -226,9 +243,9 @@ const MarsRoverPage = () => {
               
               <div className="view-container">
                 <h3>Radar View</h3>
-                <div 
-                  className="radar-view" 
-                  ref={radarViewRef}
+                <div
+                  className="radar-view"
+                  ref={radarViewRefCallback} // Use callback ref
                 >
                   {/* The 3D renderer will be attached here */}
                   <div className="view-label">
