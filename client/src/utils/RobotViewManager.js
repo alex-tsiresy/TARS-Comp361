@@ -175,23 +175,11 @@ class RobotViewManager {
   renderFirstPersonView(robotPos, robotDir) {
     if (!this.robotViewRenderer || !this.robotManager.robotCamera) return;
     
+    if (!this.robotViewRenderer || !this.robotManager || !this.robotManager.robotCamera) return;
+    
     try {
-      // Position camera at robot's eye level
-      this.robotManager.robotCamera.position.set(
-        robotPos.x, 
-        robotPos.y + 5, // Eye level
-        robotPos.z
-      );
-      
-      // Look in the direction the robot is facing
-      this.robotManager.robotCamera.lookAt(
-        robotPos.x + robotDir.x * 20,
-        robotPos.y + 3, // Slightly above horizon
-        robotPos.z + robotDir.z * 20
-      );
-      
-      this.robotManager.robotCamera.near = 0.1;
-      this.robotManager.robotCamera.far = 2000;
+      // Camera position and lookAt are now handled solely by RobotManager.updateCameraForSelectedRobot
+      // Ensure projection matrix is up-to-date if FOV or aspect ratio changed
       this.robotManager.robotCamera.updateProjectionMatrix();
       
       // Update spotlight position
@@ -331,4 +319,4 @@ class RobotViewManager {
   }
 }
 
-export default RobotViewManager; 
+export default RobotViewManager;

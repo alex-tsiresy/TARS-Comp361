@@ -286,9 +286,14 @@ class RobotManager {
       // If this is the selected robot, update the camera to follow it
       if (id === this.selectedRobotId) {
         this.updateCameraForSelectedRobot();
-        
-        // Update UI with current robot data
+      }
+      
+      // Update UI with current robot data for ALL robots
+      // Check if enough time has passed since the last update for this robot
+      const now = Date.now();
+      if (!this.lastUpdateTime[id] || now - this.lastUpdateTime[id] > 100) { // Update UI every 100ms
         bridgeService.notifyRobotUpdated(this.getRobotData(id));
+        this.lastUpdateTime[id] = now;
       }
     }
   }
@@ -565,4 +570,4 @@ class RobotManager {
   }
 }
 
-export default RobotManager; 
+export default RobotManager;
