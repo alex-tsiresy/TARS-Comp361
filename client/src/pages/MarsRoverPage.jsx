@@ -19,45 +19,73 @@ const MarsRoverPage = () => {
     setRobotTask,
     setRobotCapabilities
   } = useRobots();
-  
-  // Set up robot view renderers when renderer is available
+
+  // Effect to set up the robot view renderers once the main renderer is available
   useEffect(() => {
+    // Wait until renderer and refs are available
     if (!renderer || !firstPersonViewRef.current || !radarViewRef.current) {
-      return; // Wait until all dependencies are available
+      return;
     }
     
+    let resizeTimer = null;
     try {
-      console.log('Setting up robot view renderers');
-      
+      console.log('Setting up robot view renderers and initial resize');
       // Setup both renderers
       renderer.setupRobotViewRenderer(firstPersonViewRef.current);
       renderer.setupRadarRenderer(radarViewRef.current);
-      
-      // Handle window resizing for the renderers
-      const handleResize = () => {
-        if (renderer) {
-          renderer.handleResize();
-        }
-      };
-      
-      // Force an initial resize to ensure renderers fit containers
-      handleResize();
-      
-      // Add resize event listener
-      window.addEventListener('resize', handleResize);
-      
-      // Also trigger resize after a slight delay to catch any layout adjustments
-      const resizeTimer = setTimeout(handleResize, 500);
-      
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        clearTimeout(resizeTimer);
-      };
+
+      // Force initial resize after setup to ensure renderers fit containers
+      if (renderer.handleResize) {
+         renderer.handleResize();
+         // Also trigger resize after a slight delay to catch layout adjustments
+         resizeTimer = setTimeout(() => {
+           // Check again in case renderer became null during the timeout
+           if (renderer && renderer.handleResize) {
+             renderer.handleResize();
+           }
+         }, 500);
+      } else {
+        console.warn('Renderer does not have handleResize method during setup.');
+      }
     } catch (error) {
       console.error('Failed to set up robot view renderers:', error);
     }
-  }, [renderer, selectedRobot]);
-  
+    
+    // Cleanup function for the timer
+    return () => {
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+    };
+  }, [renderer]); // This effect runs only when the renderer instance changes
+
+  // Effect to handle ongoing window resizing for the renderers
+  useEffect(() => {
+    // Only run if renderer exists
+    if (!renderer) {
+      return;
+    }
+
+    const handleResize = () => {
+      // Check if renderer and handleResize method exist before calling
+      if (renderer && renderer.handleResize) {
+        // console.log('Handling resize for robot views'); // Optional: uncomment for debugging
+        renderer.handleResize();
+      } else {
+        // This might happen if the component unmounts while a resize is pending
+        // console.warn('Renderer or handleResize method not available during resize event'); // Optional: uncomment for debugging
+      }
+    };
+
+    // Add resize event listener
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup function to remove the event listener
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [renderer]); // This effect runs when the renderer instance changes
+
   // Set input values to match the selected robot's capabilities when it changes
   useEffect(() => {
     if (selectedRobot && selectedRobot.capabilities) {
@@ -344,4 +372,4 @@ const MarsRoverPage = () => {
   );
 };
 
-export default MarsRoverPage; 
+export default MarsRoverPage;
