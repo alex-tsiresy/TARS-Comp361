@@ -3,6 +3,7 @@ import RobotManager from './RobotManager';
 import CameraController from './CameraController';
 import TerrainObjectManager from './TerrainObjectManager';
 import RobotViewManager from './RobotViewManager';
+import bridgeService from '../context/BridgeService'; // Import BridgeService
 
 /**
  * TerrainRenderer - Core 3D rendering class for the Mars terrain simulation
@@ -35,11 +36,14 @@ class TerrainRenderer {
     
     // Handle events
     this.setupEventListeners();
-    
+
+    // Store the current heightmap path
+    this.currentHeightMapPath = '/out.png'; // Default map
+
     // Animation loop
     this.animate();
   }
-  
+
   /**
    * Set up the Three.js scene
    */
@@ -120,8 +124,12 @@ class TerrainRenderer {
     // View manager for robot-specific views (first-person and radar)
     this.viewManager = new RobotViewManager(this.scene, this, this.robotManager);
     
-    // Define terrain size (used by various managers)
-    this.terrainSize = 2000;
+    // Define terrain vertical displacement scale
+    this.displacementScale = 300;
+    
+    // Terrain dimensions will be set dynamically after loading the heightmap
+    this.terrainWidth = 0;
+    this.terrainHeight = 0;
   }
   
   /**
@@ -176,21 +184,52 @@ class TerrainRenderer {
   
   /**
    * Load the terrain and initialize objects
+   * @param {string} [heightMapPath='/out.png'] - Path to the heightmap image.
    */
-  loadTerrain() {
+  loadTerrain(heightMapPath = '/out.png') {
+    const fileName = heightMapPath.split('/').pop(); // Extract filename
+    console.log(`Loading terrain heightmap file: ${fileName} (from path: ${heightMapPath})`);
+    this.currentHeightMapPath = heightMapPath;
+
     // Early return if scene is disposed
     if (!this.scene) return;
-    
+
+    // --- Clean up existing terrain if present ---
+    if (this.terrain) {
+      console.log('Removing existing terrain mesh...');
+      this.scene.remove(this.terrain);
+      if (this.terrain.geometry) this.terrain.geometry.dispose();
+      if (this.terrain.material) {
+        // Dispose textures if they exist on the material
+        if (this.terrain.material.map) this.terrain.material.map.dispose();
+        if (this.terrain.material.normalMap) this.terrain.material.normalMap.dispose();
+        if (this.terrain.material.displacementMap) this.terrain.material.displacementMap.dispose();
+        this.terrain.material.dispose();
+      }
+      this.terrain = null;
+      this.heightmapData = null; // Clear cached height data
+      console.log('Existing terrain removed and disposed.');
+    }
+    // --- End cleanup ---
+
     const textureLoader = new THREE.TextureLoader();
-    
-    // Load terrain textures
+
+    // Load terrain textures using the provided heightMapPath
+    // Use absolute paths for static assets in the public folder
     Promise.all([
-      textureLoader.loadAsync('rock01.jpg'),  // Color texture
-      textureLoader.loadAsync('rock02.jpg'),  // Normal map
-      textureLoader.loadAsync('/out.png')     // Height map
+      textureLoader.loadAsync('/rock01.jpg').catch(err => { console.error("Failed to load color texture:", err); throw err; }),  // Color texture
+      textureLoader.loadAsync('/rock02.jpg').catch(err => { console.error("Failed to load normal texture:", err); throw err; }),  // Normal map
+      textureLoader.loadAsync(heightMapPath).catch(err => { console.error(`Failed to load heightmap texture: ${heightMapPath}`, err); throw err; })  // Height map (dynamic path)
     ]).then(([colorTexture, normalTexture, heightMap]) => {
-      // Check if component is still mounted
-      if (!this.scene) return;
+      // Check if component is still mounted or if the map changed again during loading
+      if (!this.scene || this.currentHeightMapPath !== heightMapPath) {
+         console.log('Scene disposed or map changed during load, aborting terrain creation.');
+         // Dispose newly loaded textures if we are aborting
+         colorTexture.dispose();
+         normalTexture.dispose();
+         heightMap.dispose();
+         return;
+      }
       
       // Configure texture wrapping
       colorTexture.wrapS = colorTexture.wrapT = THREE.RepeatWrapping;
@@ -198,21 +237,75 @@ class TerrainRenderer {
       colorTexture.repeat.set(50, 50);
       normalTexture.repeat.set(50, 50);
       
-      // Create terrain geometry
+      // Calculate proportional segments based on heightmap aspect ratio
+      // Configure texture wrapping
+      colorTexture.wrapS = colorTexture.wrapT = THREE.RepeatWrapping;
+      normalTexture.wrapS = normalTexture.wrapT = THREE.RepeatWrapping;
+      colorTexture.repeat.set(50, 50);
+      normalTexture.repeat.set(50, 50);
+
+      // --- Calculate dynamic terrain dimensions ---
+      const imgWidth = heightMap.image.width;
+      const imgHeight = heightMap.image.height;
+      const maxDimensionSize = 2000; // Set the size for the larger dimension
+
+      if (imgWidth === 0 || imgHeight === 0) {
+        console.warn("Heightmap image has zero dimensions. Falling back to default size.");
+        this.terrainWidth = maxDimensionSize;
+        this.terrainHeight = maxDimensionSize;
+      } else if (imgWidth >= imgHeight) {
+        this.terrainWidth = maxDimensionSize;
+        this.terrainHeight = maxDimensionSize * (imgHeight / imgWidth);
+      } else {
+        this.terrainHeight = maxDimensionSize;
+        this.terrainWidth = maxDimensionSize * (imgWidth / imgHeight);
+      }
+      console.log(`Heightmap: ${imgWidth}x${imgHeight}, Terrain Dimensions: ${this.terrainWidth.toFixed(2)}x${this.terrainHeight.toFixed(2)}`);
+
+      // --- Notify context about new dimensions ---
+      // Ensure bridgeService is available before notifying
+      if (bridgeService && typeof bridgeService.notifyTerrainDimensionsChanged === 'function') {
+        bridgeService.notifyTerrainDimensionsChanged({ 
+          width: this.terrainWidth, 
+          height: this.terrainHeight 
+        });
+      } else {
+        console.warn("BridgeService not available or notifyTerrainDimensionsChanged not found.");
+      }
+      // --- End notification ---
+
+      // Calculate proportional segments based on heightmap aspect ratio
+      const maxSegments = 256; // Target for the longer dimension
+      let widthSegments, heightSegments;
+
+      if (imgWidth === 0 || imgHeight === 0) {
+        widthSegments = 256; // Fallback
+        heightSegments = 256;
+      } else if (imgWidth >= imgHeight) {
+        widthSegments = maxSegments;
+        heightSegments = Math.max(1, Math.round(maxSegments * (imgHeight / imgWidth)));
+      } else {
+        heightSegments = maxSegments;
+        widthSegments = Math.max(1, Math.round(maxSegments * (imgWidth / imgHeight)));
+      }
+      console.log(`Segments: ${widthSegments}x${heightSegments}`);
+
+      // Create terrain geometry using dynamic dimensions and proportional segments
+      // Subtract 1 because PlaneGeometry takes segment counts, not vertex counts
       const geometry = new THREE.PlaneGeometry(
-        this.terrainSize, 
-        this.terrainSize, 
-        256, 
-        256
+        this.terrainWidth,
+        this.terrainHeight,
+        widthSegments - 1,
+        heightSegments - 1
       );
       geometry.rotateX(-Math.PI / 2); // Make it horizontal
-      
+
       // Create terrain material - add some emissive for better visibility
       const material = new THREE.MeshStandardMaterial({
         map: colorTexture,
         normalMap: normalTexture,
         displacementMap: heightMap,
-        displacementScale: 300,
+        displacementScale: this.displacementScale,
         roughness: 0.8,
         metalness: 0.2,
         emissive: 0x111111, // Very subtle emissive
@@ -224,17 +317,24 @@ class TerrainRenderer {
         this.terrain = new THREE.Mesh(geometry, material);
         this.terrain.receiveShadow = true;
         this.scene.add(this.terrain);
-        
+
         // Process heightmap for height sampling
         this.processHeightmap(heightMap);
-        
-        // Add grid helper via object manager
-        this.objectManager.addGridHelper();
-        
-        // Add ambient objects via object manager
-        this.objectManager.addAmbientObjects();
+
+        // Re-add grid helper and ambient objects if they were removed or need repositioning
+        // For now, assume they persist or are managed elsewhere. If issues arise,
+        // we might need to call objectManager.dispose() and re-add objects here.
+        // Example:
+        // if (this.objectManager) {
+        //   this.objectManager.dispose(); // Clear old objects
+        //   this.objectManager.addGridHelper();
+        //   this.objectManager.addAmbientObjects();
+        // }
+
+        console.log(`Terrain loaded successfully with map: ${heightMapPath}`);
+
       } else {
-        // Clean up resources if scene is gone
+        // Clean up newly loaded resources if scene is gone
         geometry.dispose();
         material.dispose();
       }
@@ -275,12 +375,14 @@ class TerrainRenderer {
     
     try {
       // Convert world coordinates to terrain grid coordinates
-      const gridSize = this.terrainSize / 2;
-      
-      // Normalize x and z to 0-1 range
-      const normalizedX = (x + gridSize) / this.terrainSize;
-      const normalizedZ = (z + gridSize) / this.terrainSize;
-      
+      // Use separate width and height
+      const gridWidth = this.terrainWidth / 2;
+      const gridHeight = this.terrainHeight / 2; // Corresponds to Z dimension in world space
+
+      // Normalize x and z to 0-1 range based on dynamic dimensions
+      const normalizedX = (x + gridWidth) / this.terrainWidth;
+      const normalizedZ = (z + gridHeight) / this.terrainHeight; // Use terrainHeight for Z
+
       // Calculate pixel coordinates in the heightmap
       const pixelX = Math.floor(normalizedX * this.heightmapWidth);
       const pixelZ = Math.floor(normalizedZ * this.heightmapHeight);
@@ -297,14 +399,21 @@ class TerrainRenderer {
       const heightValue = this.heightmapData[pixelIndex];
       
       // Scale height value (0-255) to terrain height
-      // Assuming max height is 300 (from displacementScale)
-      const terrainHeight = (heightValue / 255) * 300;
+      // Use the defined displacement scale
+      const terrainHeight = (heightValue / 255) * this.displacementScale;
       
       return terrainHeight;
     } catch (error) {
       console.error('Error calculating height from heightmap:', error);
       return 0;
     }
+  }
+
+  /**
+   * Get the dynamic terrain dimensions
+   */
+  getTerrainDimensions() {
+    return { width: this.terrainWidth, height: this.terrainHeight };
   }
   
   /**
@@ -497,4 +606,4 @@ class TerrainRenderer {
   }
 }
 
-export default TerrainRenderer; 
+export default TerrainRenderer;

@@ -1,17 +1,86 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import MapView from '../components/MapView';
 import '../styles/MarsRoverPage.css';
 import { useRobots } from '../context/RobotContext';
+// No need for useLocation/useNavigate if using window.location
+
+// Function to derive a display name from a map filename
+const getMapNameFromFilename = (filename) => {
+  if (!filename) return 'Unknown Map';
+  // Remove extension and replace underscores with spaces
+  return filename.replace(/\.png$/i, '').replace(/_/g, ' ');
+};
+
+// Use Vite's import.meta.glob to dynamically get map files from the public directory
+// The keys will be the paths relative to the project root (e.g., /public/maps/...)
+const mapFiles = import.meta.glob('/public/maps/*.png');
+
+// Process the glob result to create the availableMaps array
+const availableMaps = Object.keys(mapFiles).map(path => {
+  // Extract filename from the path (e.g., /public/maps/DTEPC_...png -> DTEPC_...png)
+  const filename = path.split('/').pop();
+  // Construct the public path accessible by the browser (remove /public prefix)
+  const publicPath = path.replace(/^\/public/, '');
+  return {
+    name: getMapNameFromFilename(filename),
+    path: publicPath // Use the correct public path
+  };
+});
+
+// Sort maps alphabetically by name for consistency
+availableMaps.sort((a, b) => a.name.localeCompare(b.name));
+
 
 const MarsRoverPage = () => {
   const [taskInput, setTaskInput] = useState('');
+  // State to hold the list of available maps - initialize directly from glob result
+  const [maps, setMaps] = useState(availableMaps);
+
   const [speedInput, setSpeedInput] = useState('0.5');
   const [sensorRangeInput, setSensorRangeInput] = useState('100');
   const [turnRateInput, setTurnRateInput] = useState('0.05');
   const [batteryCapacityInput, setBatteryCapacityInput] = useState('100');
-  const firstPersonViewRef = useRef(null);
-  const radarViewRef = useRef(null);
-  
+
+  // Function to get map path from URL query param or default, using the maps state
+  const getMapPathFromQuery = useCallback((currentMaps) => {
+    if (!currentMaps || currentMaps.length === 0) {
+      console.log("getMapPathFromQuery called before maps are loaded or maps list is empty.");
+      return null; // Return null if maps aren't ready
+    }
+    const params = new URLSearchParams(window.location.search);
+    const mapParam = params.get('map');
+    // Validate if the mapParam is one of the available maps from state
+    const foundMap = currentMaps.find(map => map.path === mapParam);
+    if (foundMap) {
+      console.log(`Map found in URL: ${foundMap.path}`);
+      return foundMap.path;
+    }
+    // Default to the first map in the list if URL param is missing or invalid
+    const defaultPath = currentMaps.length > 0 ? currentMaps[0].path : null;
+    console.log(`No valid map in URL or list empty, defaulting to: ${defaultPath}`);
+    return defaultPath;
+  }, []); // No dependencies needed for the function itself
+
+  // Initialize state from query param, using the directly initialized maps state
+  const [selectedMapPath, setSelectedMapPath] = useState(() => getMapPathFromQuery(maps));
+
+  // Use state and callback refs instead of useRef
+  const [firstPersonViewElement, setFirstPersonViewElement] = useState(null);
+  const [radarViewElement, setRadarViewElement] = useState(null);
+
+  // Callback refs to capture the DOM elements
+  const firstPersonViewRefCallback = useCallback(node => {
+    if (node !== null) {
+      setFirstPersonViewElement(node);
+    }
+  }, []);
+
+  const radarViewRefCallback = useCallback(node => {
+    if (node !== null) {
+      setRadarViewElement(node);
+    }
+  }, []);
+
   // Get state and actions from context
   const { 
     selectedRobot, 
@@ -19,45 +88,86 @@ const MarsRoverPage = () => {
     setRobotTask,
     setRobotCapabilities
   } = useRobots();
-  
-  // Set up robot view renderers when renderer is available
+
+  // Effect to set up the robot view renderers once the main renderer AND elements are available
   useEffect(() => {
-    if (!renderer || !firstPersonViewRef.current || !radarViewRef.current) {
-      return; // Wait until all dependencies are available
+    // Wait until renderer and elements are available
+    if (!renderer || !firstPersonViewElement || !radarViewElement) {
+      console.log('Renderer or view elements not ready yet.'); // Debug log
+      return;
     }
-    
+
+    console.log('Renderer and elements ready, setting up views.'); // Debug log
+    let resizeTimer = null;
     try {
-      console.log('Setting up robot view renderers');
-      
-      // Setup both renderers
-      renderer.setupRobotViewRenderer(firstPersonViewRef.current);
-      renderer.setupRadarRenderer(radarViewRef.current);
-      
-      // Handle window resizing for the renderers
-      const handleResize = () => {
-        if (renderer) {
-          renderer.handleResize();
-        }
-      };
-      
-      // Force an initial resize to ensure renderers fit containers
-      handleResize();
-      
-      // Add resize event listener
-      window.addEventListener('resize', handleResize);
-      
-      // Also trigger resize after a slight delay to catch any layout adjustments
-      const resizeTimer = setTimeout(handleResize, 500);
-      
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        clearTimeout(resizeTimer);
-      };
+      console.log('Setting up robot view renderers and initial resize');
+      // Setup both renderers using the state elements
+      renderer.setupRobotViewRenderer(firstPersonViewElement);
+      renderer.setupRadarRenderer(radarViewElement);
+
+      // Force initial resize after setup to ensure renderers fit containers
+      if (renderer.handleResize) {
+         renderer.handleResize();
+         // Also trigger resize after a slight delay to catch layout adjustments
+         resizeTimer = setTimeout(() => {
+           // Check again in case renderer became null during the timeout
+           if (renderer && renderer.handleResize) {
+             renderer.handleResize();
+           }
+         }, 500);
+      } else {
+        console.warn('Renderer does not have handleResize method during setup.');
+      }
     } catch (error) {
       console.error('Failed to set up robot view renderers:', error);
     }
-  }, [renderer, selectedRobot]);
-  
+    
+    // Cleanup function for the timer
+    return () => {
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+    };
+    // Depend on renderer and the elements themselves
+  }, [renderer, firstPersonViewElement, radarViewElement]);
+
+  // Effect to handle ongoing window resizing for the renderers (no change needed here)
+  useEffect(() => {
+    // Only run if renderer exists
+    if (!renderer) {
+      return;
+    }
+
+    const handleResize = () => {
+      // Check if renderer and handleResize method exist before calling
+      if (renderer && renderer.handleResize) {
+        // console.log('Handling resize for robot views'); // Optional: uncomment for debugging
+        renderer.handleResize();
+      } else {
+        // This might happen if the component unmounts while a resize is pending
+        // console.warn('Renderer or handleResize method not available during resize event'); // Optional: uncomment for debugging
+      }
+    };
+
+    // Add resize event listener
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup function to remove the event listener
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [renderer]); // This effect runs when the renderer instance changes
+
+  // Handle map selection change - NOW forces reload
+  const handleMapChange = (event) => {
+    const newMapPath = event.target.value;
+    // Update URL search params to trigger reload with the new map
+    // Use encodeURIComponent to handle potential special characters in paths
+    window.location.search = `?map=${encodeURIComponent(newMapPath)}`;
+    // No need to call setSelectedMapPath or renderer.loadTerrain here,
+    // the reload will handle initialization with the new path from the URL.
+  };
+
   // Set input values to match the selected robot's capabilities when it changes
   useEffect(() => {
     if (selectedRobot && selectedRobot.capabilities) {
@@ -66,7 +176,8 @@ const MarsRoverPage = () => {
       setTurnRateInput(selectedRobot.capabilities.turnRate?.toString() || '0.05');
       setBatteryCapacityInput(selectedRobot.capabilities.batteryCapacity?.toString() || '100');
     }
-  }, [selectedRobot]);
+    // Only run this effect when the selected robot ID changes, not on every capability update
+  }, [selectedRobot?.id]); 
   
   // Handle behavior selection - now directly sets the task
   const handleBehaviorSelect = (behavior, params = {}) => {
@@ -139,7 +250,29 @@ const MarsRoverPage = () => {
   return (
     <div className="mars-rover-page">
       <div className="terrain-panel">
-        <MapView />
+        {/* Pass selectedMapPath to MapView */}
+        <MapView mapPath={selectedMapPath} />
+        {/* Add Map Selection Dropdown */}
+        <div className="map-selector-container">
+          <label htmlFor="map-select">Select Terrain Map:</label>
+          <select 
+            id="map-select" 
+            value={selectedMapPath} 
+            onChange={handleMapChange}
+            className="map-select-dropdown"
+            disabled={maps.length === 0} // Disable if maps haven't loaded
+          >
+            {maps.length === 0 ? (
+              <option>Loading maps...</option>
+            ) : (
+              maps.map(map => (
+                <option key={map.path} value={map.path}>
+                  {map.name}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
       </div>
       
       <div className="info-panel">
@@ -181,9 +314,9 @@ const MarsRoverPage = () => {
             <div className="robot-views">
               <div className="view-container">
                 <h3>First Person View</h3>
-                <div 
-                  className="first-person-view" 
-                  ref={firstPersonViewRef}
+                <div
+                  className="first-person-view"
+                  ref={firstPersonViewRefCallback} // Use callback ref
                 >
                   {/* The 3D renderer will be attached here */}
                   <div className="view-label">
@@ -198,9 +331,9 @@ const MarsRoverPage = () => {
               
               <div className="view-container">
                 <h3>Radar View</h3>
-                <div 
-                  className="radar-view" 
-                  ref={radarViewRef}
+                <div
+                  className="radar-view"
+                  ref={radarViewRefCallback} // Use callback ref
                 >
                   {/* The 3D renderer will be attached here */}
                   <div className="view-label">
@@ -244,12 +377,12 @@ const MarsRoverPage = () => {
                 
                 <div className="capability-controls">
                   <div className="speed-control">
-                    <label htmlFor="speed-input">Speed:</label>
+                    <label htmlFor="speed-input">Speed (m/s):</label>
                     <input
                       id="speed-input"
                       type="number"
                       min="0.1"
-                      max="2"
+                      max="10.0"  // Updated max
                       step="0.1"
                       value={speedInput}
                       onChange={(e) => setSpeedInput(e.target.value)}
@@ -265,12 +398,12 @@ const MarsRoverPage = () => {
                   </div>
                   
                   <div className="capacity-control">
-                    <label htmlFor="sensor-range-input">Sensor Range:</label>
+                    <label htmlFor="sensor-range-input">Sensor Range (m):</label>
                     <input
                       id="sensor-range-input"
                       type="number"
                       min="10"
-                      max="500"
+                      max="500" // Range already correct
                       step="10"
                       value={sensorRangeInput}
                       onChange={(e) => setSensorRangeInput(e.target.value)}
@@ -286,12 +419,12 @@ const MarsRoverPage = () => {
                   </div>
                   
                   <div className="capacity-control">
-                    <label htmlFor="turn-rate-input">Turn Rate:</label>
+                    <label htmlFor="turn-rate-input">Turn Rate (rad/s):</label>
                     <input
                       id="turn-rate-input"
                       type="number"
                       min="0.01"
-                      max="0.5"
+                      max="1.0" // Updated max
                       step="0.01"
                       value={turnRateInput}
                       onChange={(e) => setTurnRateInput(e.target.value)}
@@ -307,12 +440,12 @@ const MarsRoverPage = () => {
                   </div>
                   
                   <div className="capacity-control">
-                    <label htmlFor="battery-capacity-input">Battery:</label>
+                    <label htmlFor="battery-capacity-input">Battery (units):</label>
                     <input
                       id="battery-capacity-input"
                       type="number"
                       min="50"
-                      max="500"
+                      max="500" // Range already correct
                       step="10"
                       value={batteryCapacityInput}
                       onChange={(e) => setBatteryCapacityInput(e.target.value)}
@@ -344,4 +477,4 @@ const MarsRoverPage = () => {
   );
 };
 
-export default MarsRoverPage; 
+export default MarsRoverPage;

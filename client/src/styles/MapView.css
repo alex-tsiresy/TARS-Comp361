@@ -110,6 +110,7 @@
   font-size: 14px;
   margin: 0;
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+  margin-left: auto; /* Push instructions to the right */
 }
 
 .direction-indicator {
@@ -199,4 +200,4 @@
 .add-robot-button:hover .add-robot-tooltip {
   opacity: 1;
   transform: translateX(-50%) translateY(-5px);
-} 
+}

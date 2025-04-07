@@ -13,14 +13,16 @@ const actions = {
   SELECT_ROBOT: 'SELECT_ROBOT',
   SET_ROBOT_TASK: 'SET_ROBOT_TASK',
   SET_RENDERER: 'SET_RENDERER',
-  SET_ROBOT_CAPABILITIES: 'SET_ROBOT_CAPABILITIES'
+  SET_ROBOT_CAPABILITIES: 'SET_ROBOT_CAPABILITIES',
+  UPDATE_TERRAIN_DIMENSIONS: 'UPDATE_TERRAIN_DIMENSIONS' // New action type
 };
 
 // Initial state
 const initialState = {
   robots: {}, // Map of robotId -> robotData
   selectedRobotId: null,
-  renderer: null
+  renderer: null,
+  terrainDimensions: { width: 0, height: 0 } // Add terrain dimensions
 };
 
 // Reducer function using Immer to handle state updates
@@ -49,6 +51,20 @@ function robotReducer(state, action) {
       
       case actions.SET_RENDERER:
         draft.renderer = action.payload;
+        // Restore setting initial dimensions when renderer is first set.
+        // This provides non-zero dimensions quickly for initial render.
+        if (action.payload && typeof action.payload.getTerrainDimensions === 'function') {
+          draft.terrainDimensions = action.payload.getTerrainDimensions();
+          console.log('RobotContext: Initial terrain dimensions set on renderer init:', draft.terrainDimensions);
+        } else {
+          // Fallback if renderer is invalid or missing the method
+          draft.terrainDimensions = { width: 0, height: 0 }; 
+        }
+        break;
+
+      case actions.UPDATE_TERRAIN_DIMENSIONS: // Handle new action
+        draft.terrainDimensions = action.payload;
+        console.log('RobotContext: Terrain dimensions updated:', draft.terrainDimensions);
         break;
         
       case actions.SET_ROBOT_CAPABILITIES:
@@ -81,30 +97,59 @@ export const RobotProvider = ({ children }) => {
   
   // Effect to initialize the renderer
   useEffect(() => {
+    // Function to get map path from URL query param or default
+    // Duplicated from MarsRoverPage - consider refactoring to a shared util if needed
+    const getMapPathFromQuery = () => {
+      const params = new URLSearchParams(window.location.search);
+      const mapParam = params.get('map');
+      // Basic check if mapParam looks like a path - more robust validation could be added
+      // We don't have access to availableMaps here easily, so we rely on TerrainRenderer handling errors.
+      if (mapParam && mapParam.includes('/')) {
+        return mapParam;
+      }
+      return '/out.png'; // Default map path
+    };
+
     // Listen for renderer initialization using BridgeService subscription
     const unsubscribeInitialized = bridgeService.subscribe('rendererInitialized', (renderer) => {
-      dispatch({ 
-        type: actions.SET_RENDERER, 
-        payload: renderer 
+      dispatch({
+        type: actions.SET_RENDERER,
+        payload: renderer
       });
+      // --- Removed loadTerrain call here; MapView now handles it ---
     });
 
     // Still keep DOM event listener for backward compatibility
     const handleRendererInitialized = (event) => {
       const { renderer } = event.detail;
-      dispatch({ 
-        type: actions.SET_RENDERER, 
-        payload: renderer 
+      dispatch({
+        type: actions.SET_RENDERER,
+        payload: renderer
       });
+       // --- Removed loadTerrain call here; MapView now handles it ---
     };
-    
+
     window.addEventListener('rendererInitialized', handleRendererInitialized);
-    
+
     return () => {
       window.removeEventListener('rendererInitialized', handleRendererInitialized);
       unsubscribeInitialized();
     };
   }, []);
+
+  // Effect to listen for terrain dimension updates
+  useEffect(() => {
+    const unsubscribeDimensions = bridgeService.subscribe('terrainDimensionsChanged', (dimensions) => {
+      dispatch({
+        type: actions.UPDATE_TERRAIN_DIMENSIONS,
+        payload: dimensions
+      });
+    });
+
+    return () => {
+      unsubscribeDimensions();
+    };
+  }, []); // Run once on mount
   
   // Effect to listen for robot updates using BridgeService subscriptions
   useEffect(() => {
@@ -235,6 +280,7 @@ export const RobotProvider = ({ children }) => {
     selectedRobotId: state.selectedRobotId,
     selectedRobot,
     renderer: state.renderer,
+    terrainDimensions: state.terrainDimensions, // Expose terrain dimensions
     
     // Actions
     addRobotAtPosition,
@@ -257,4 +303,4 @@ export const useRobots = () => {
     throw new Error('useRobots must be used within a RobotProvider');
   }
   return context;
-}; 
+};

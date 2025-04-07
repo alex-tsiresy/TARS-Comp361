@@ -258,7 +258,7 @@
 }
 
 .input-group input {
-  width: 100%;
+  width: 95%;
   background-color: #0a0a0a;
   border: 1px solid rgba(242, 208, 36, 0.4);
   padding: 10px;
@@ -284,6 +284,7 @@
   cursor: pointer;
   transition: all 0.3s;
   text-align: center;
+  margin-bottom: 20px;
 }
 
 .login-button:hover {
@@ -420,4 +421,76 @@
   .subtitle {
     font-size: 1.8rem;
   }
+}
+
+.error-message {
+  color: red;
+  font-size: 0.9rem;
+  margin-top: 10px;
+}
+
+.logout-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
+}
+
+
+.logout-content {
+  background-color: #131313;
+  border: 2px solid #f2d024;
+  border-radius: 5px;
+
+  background: #0a0a0a;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 0 40px rgba(242, 208, 36, 0.2);
+  color: #f2d024;
+  font-family: 'Courier New', monospace;
+}
+
+.logout-content h3 {
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+}
+
+.confirm-button, .cancel-button, .save-button {
+  margin: 10px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-size: 1rem;
+  background-color: rgba(242, 208, 36, 0.1);
+  color: #f2d024;
+  border: 1px solid #f2d024;
+  padding: 12px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-align: center;
+}
+
+
+.confirm-button:hover, .cancel-button:hover, .save-button:hover{
+  background-color: rgba(242, 208, 36, 0.15);
+  box-shadow: 0 0 15px rgba(242, 208, 36, 0.4);
+  transform: translateY(-2px);
+}
+
+.confirm-button:active, .cancel-button:active, .save-button:active {
+  transform: translateY(1px);
 }

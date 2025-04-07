@@ -90,7 +90,7 @@ class RobotBehaviors {
       
       // Randomize speed with a preference for consistent motion
       const speedVariance = 0.2; // Only vary speed by 20%
-      const baseSpeed = robot.capabilities.maxSpeed * 0.9; // Base at 90% of max speed
+      const baseSpeed = robot.capabilities.maxSpeed * 0.4; // Lower base speed for random behavior
       const speedAdjustment = (Math.random() * 2 - 1) * speedVariance;
       robot.targetSpeed = baseSpeed * (1 + speedAdjustment);
     }
@@ -98,8 +98,8 @@ class RobotBehaviors {
     // Update direction and speed
     this.robotManager.movement.smoothlyUpdateDirectionAndSpeed(robot, deltaTime);
     
-    // Apply movement at full strength
-    const moveFactor = 1.2; // Boost straight-line movement
+    // Apply movement with further reduced factor for even slower visual speed
+    const moveFactor = 0.1; // Further reduced from 0.5
     robot.position.x += robot.direction.x * robot.speed * moveFactor;
     robot.position.z += robot.direction.z * robot.speed * moveFactor;
   }
@@ -382,6 +382,112 @@ class RobotBehaviors {
       }
     }
   }
+
+  // Find good weather behavior - searches for areas with optimal weather conditions
+  applyFindGoodWeatherBehavior(robot, deltaTime) {
+    if (!robot.behaviorState.targetPosition) {
+      if (robot.behaviorState.thinkTime > 500) {
+        robot.behaviorState.thinkTime = 0;
+
+        // Favor searching in open areas and away from obstacles
+        const searchAngle = Math.random() * Math.PI * 2;
+        const searchDistance = robot.capabilities.sensorRange * (0.8 + Math.random() * 0.4);
+
+        robot.behaviorState.targetPosition = {
+          x: robot.position.x + Math.cos(searchAngle) * searchDistance,
+          z: robot.position.z + Math.sin(searchAngle) * searchDistance
+        };
+      } else {
+        // While "thinking", move in a meandering pattern to simulate looking for water
+        robot.targetSpeed = robot.capabilities.maxSpeed * 0.7;
+        
+        // Slight zigzag movement to simulate searching for water
+        const zigzagFactor = Math.sin(robot.behaviorState.thinkTime * 0.01) * 0.3;
+        const forwardVector = {
+          x: robot.direction.x,
+          z: robot.direction.z
+        };
+        const sideVector = {
+          x: -robot.direction.z,
+          z: robot.direction.x
+        };
+        
+        robot.position.x += (forwardVector.x + sideVector.x * zigzagFactor) * robot.speed;
+        robot.position.z += (forwardVector.z + sideVector.z * zigzagFactor) * robot.speed;
+      }
+    } else {
+      robot.targetSpeed = robot.capabilities.maxSpeed * 0.85;
+
+      this.robotManager.movement.moveTowardPoint(robot, robot.behaviorState.targetPosition, deltaTime);
+      
+      if (this._distanceToTarget(robot, robot.behaviorState.targetPosition) < 12) {
+        const foundGoodWeather = Math.random() < 0.5;
+        if (foundGoodWeather) {
+          robot.targetSpeed = 0;
+          setTimeout(() => {
+            robot.behaviorState.targetPosition = null;
+            robot.targetSpeed = robot.capabilities.maxSpeed * 0.9;
+          }, 700);
+        } else {
+          robot.behaviorState.targetPosition = null;
+        }
+      }
+    }
+  }
+
+  // Find good soil behavior - searches for fertile soil for plants
+  applyFindGoodSoilBehavior(robot, deltaTime) {
+    if (!robot.behaviorState.targetPosition) {
+      if (robot.behaviorState.thinkTime > 600) {
+        robot.behaviorState.thinkTime = 0;
+
+        const searchAngle = Math.random() * Math.PI * 2;
+        const searchDistance = robot.capabilities.sensorRange * (0.6 + Math.random() * 0.5);
+
+        robot.behaviorState.targetPosition = {
+          x: robot.position.x + Math.cos(searchAngle) * searchDistance,
+          z: robot.position.z + Math.sin(searchAngle) * searchDistance
+        };
+      
+      } else {
+        // While "thinking", move in a meandering pattern to simulate looking for water
+        robot.targetSpeed = robot.capabilities.maxSpeed * 0.7;
+        
+        // Slight zigzag movement to simulate searching for water
+        const zigzagFactor = Math.sin(robot.behaviorState.thinkTime * 0.01) * 0.3;
+        const forwardVector = {
+          x: robot.direction.x,
+          z: robot.direction.z
+        };
+        const sideVector = {
+          x: -robot.direction.z,
+          z: robot.direction.x
+        };
+        
+        robot.position.x += (forwardVector.x + sideVector.x * zigzagFactor) * robot.speed;
+        robot.position.z += (forwardVector.z + sideVector.z * zigzagFactor) * robot.speed;
+      }
+      
+    } else {
+      robot.targetSpeed = robot.capabilities.maxSpeed * 0.85;
+
+      this.robotManager.movement.moveTowardPoint(robot, robot.behaviorState.targetPosition, deltaTime);
+      
+      if (this._distanceToTarget(robot, robot.behaviorState.targetPosition) < 10) {
+        const foundGoodSoil = Math.random() < 0.4;
+        if (foundGoodSoil) {
+          robot.targetSpeed = 0;
+          setTimeout(() => {
+            robot.behaviorState.targetPosition = null;
+            robot.targetSpeed = robot.capabilities.maxSpeed * 0.8;
+          }, 800);
+        } else {
+          robot.behaviorState.targetPosition = null;
+        }
+      }
+    }
+  }
+
 }
 
-export default RobotBehaviors; 
+export default RobotBehaviors;
