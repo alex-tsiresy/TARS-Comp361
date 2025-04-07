@@ -35,4 +35,4 @@ const getAllImages = async (req, res) => {
   }
 };
 
-model.exports = { getImageById, getAllImages };
+module.exports = { getImageById, getAllImages };
