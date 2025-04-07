@@ -1,7 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react'; // Removed useRef, added useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import MapView from '../components/MapView';
 import '../styles/MarsRoverPage.css';
 import { useRobots } from '../context/RobotContext';
+// No need for useLocation/useNavigate if using window.location
+
+// Define available maps - Only include maps from the /maps directory
+const availableMaps = [
+  { name: 'Crater DTEPC 058362', path: '/maps/DTEPC_058362_1070_057650_1070_A01.png' },
+  { name: 'Valley DTEPD 063394', path: '/maps/DTEPD_063394_2485_063526_2485_A01.png' },
+];
 
 const MarsRoverPage = () => {
   const [taskInput, setTaskInput] = useState('');
@@ -9,6 +16,28 @@ const MarsRoverPage = () => {
   const [sensorRangeInput, setSensorRangeInput] = useState('100');
   const [turnRateInput, setTurnRateInput] = useState('0.05');
   const [batteryCapacityInput, setBatteryCapacityInput] = useState('100');
+
+  // Function to get map path from URL query param or default
+  const getMapPathFromQuery = () => {
+    const params = new URLSearchParams(window.location.search);
+    const mapParam = params.get('map');
+    // Validate if the mapParam is one of the available maps
+    // Validate if the mapParam is one of the available maps
+    const foundMap = availableMaps.find(map => map.path === mapParam);
+    if (foundMap) {
+      console.log(`Map found in URL: ${foundMap.path}`);
+      return foundMap.path;
+    }
+    // Default to the first map in the list if URL param is missing or invalid
+    // Ensure the list is not empty before accessing index 0
+    const defaultPath = availableMaps.length > 0 ? availableMaps[0].path : null;
+    console.log(`No valid map in URL or list empty, defaulting to: ${defaultPath}`);
+    // Return the default path (which could be null if the list is empty)
+    return defaultPath;
+  };
+
+  // Initialize state from query param
+  const [selectedMapPath, setSelectedMapPath] = useState(getMapPathFromQuery());
   // Use state and callback refs instead of useRef
   const [firstPersonViewElement, setFirstPersonViewElement] = useState(null);
   const [radarViewElement, setRadarViewElement] = useState(null);
@@ -103,6 +132,16 @@ const MarsRoverPage = () => {
     };
   }, [renderer]); // This effect runs when the renderer instance changes
 
+  // Handle map selection change - NOW forces reload
+  const handleMapChange = (event) => {
+    const newMapPath = event.target.value;
+    // Update URL search params to trigger reload with the new map
+    // Use encodeURIComponent to handle potential special characters in paths
+    window.location.search = `?map=${encodeURIComponent(newMapPath)}`;
+    // No need to call setSelectedMapPath or renderer.loadTerrain here,
+    // the reload will handle initialization with the new path from the URL.
+  };
+
   // Set input values to match the selected robot's capabilities when it changes
   useEffect(() => {
     if (selectedRobot && selectedRobot.capabilities) {
@@ -185,7 +224,24 @@ const MarsRoverPage = () => {
   return (
     <div className="mars-rover-page">
       <div className="terrain-panel">
-        <MapView />
+        {/* Pass selectedMapPath to MapView */}
+        <MapView mapPath={selectedMapPath} />
+        {/* Add Map Selection Dropdown */}
+        <div className="map-selector-container">
+          <label htmlFor="map-select">Select Terrain Map:</label>
+          <select 
+            id="map-select" 
+            value={selectedMapPath} 
+            onChange={handleMapChange}
+            className="map-select-dropdown"
+          >
+            {availableMaps.map(map => (
+              <option key={map.path} value={map.path}>
+                {map.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
       
       <div className="info-panel">

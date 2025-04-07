@@ -155,6 +155,17 @@ class BridgeService {
       window.dispatchEvent(event);
     }
   }
+
+  /**
+   * Called by TerrainRenderer when terrain dimensions change after loading a new map
+   */
+  notifyTerrainDimensionsChanged(dimensions) {
+    // Notify direct subscribers
+    this._notifySubscribers('terrainDimensionsChanged', dimensions);
+    
+    // No DOM event needed for this as it's internal context state
+    console.log('BridgeService: Notified subscribers of terrain dimension change:', dimensions);
+  }
   
   /**
    * Called by components to request adding a robot
@@ -252,4 +263,4 @@ class BridgeService {
 // Create a singleton instance
 const bridgeService = new BridgeService();
 
-export default bridgeService; 
+export default bridgeService;

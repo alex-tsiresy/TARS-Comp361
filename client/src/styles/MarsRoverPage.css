@@ -346,6 +346,42 @@
   cursor: not-allowed;
 }
 
+/* Map Selector Styles */
+.map-selector-container {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10; /* Ensure it's above the MapView canvas */
+  background-color: rgba(40, 40, 40, 0.8);
+  padding: 8px 12px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.map-selector-container label {
+  color: #ccc;
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+.map-select-dropdown {
+  padding: 5px 8px;
+  border-radius: 4px;
+  background-color: #555;
+  color: #eee;
+  border: 1px solid #666;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.map-select-dropdown:focus {
+  outline: none;
+  border-color: #888;
+}
+
 /* Update for better layout */
 .capability-controls {
   display: flex;
@@ -587,4 +623,4 @@ canvas {
   border-color: #448844;
   color: #aaa;
   cursor: not-allowed;
-} 
+}

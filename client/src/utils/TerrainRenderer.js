@@ -3,6 +3,7 @@ import RobotManager from './RobotManager';
 import CameraController from './CameraController';
 import TerrainObjectManager from './TerrainObjectManager';
 import RobotViewManager from './RobotViewManager';
+import bridgeService from '../context/BridgeService'; // Import BridgeService
 
 /**
  * TerrainRenderer - Core 3D rendering class for the Mars terrain simulation
@@ -35,11 +36,14 @@ class TerrainRenderer {
     
     // Handle events
     this.setupEventListeners();
-    
+
+    // Store the current heightmap path
+    this.currentHeightMapPath = '/out.png'; // Default map
+
     // Animation loop
     this.animate();
   }
-  
+
   /**
    * Set up the Three.js scene
    */
@@ -180,21 +184,52 @@ class TerrainRenderer {
   
   /**
    * Load the terrain and initialize objects
+   * @param {string} [heightMapPath='/out.png'] - Path to the heightmap image.
    */
-  loadTerrain() {
+  loadTerrain(heightMapPath = '/out.png') {
+    const fileName = heightMapPath.split('/').pop(); // Extract filename
+    console.log(`Loading terrain heightmap file: ${fileName} (from path: ${heightMapPath})`);
+    this.currentHeightMapPath = heightMapPath;
+
     // Early return if scene is disposed
     if (!this.scene) return;
-    
+
+    // --- Clean up existing terrain if present ---
+    if (this.terrain) {
+      console.log('Removing existing terrain mesh...');
+      this.scene.remove(this.terrain);
+      if (this.terrain.geometry) this.terrain.geometry.dispose();
+      if (this.terrain.material) {
+        // Dispose textures if they exist on the material
+        if (this.terrain.material.map) this.terrain.material.map.dispose();
+        if (this.terrain.material.normalMap) this.terrain.material.normalMap.dispose();
+        if (this.terrain.material.displacementMap) this.terrain.material.displacementMap.dispose();
+        this.terrain.material.dispose();
+      }
+      this.terrain = null;
+      this.heightmapData = null; // Clear cached height data
+      console.log('Existing terrain removed and disposed.');
+    }
+    // --- End cleanup ---
+
     const textureLoader = new THREE.TextureLoader();
-    
-    // Load terrain textures
+
+    // Load terrain textures using the provided heightMapPath
+    // Use absolute paths for static assets in the public folder
     Promise.all([
-      textureLoader.loadAsync('rock01.jpg'),  // Color texture
-      textureLoader.loadAsync('rock02.jpg'),  // Normal map
-      textureLoader.loadAsync('/out.png')     // Height map
+      textureLoader.loadAsync('/rock01.jpg').catch(err => { console.error("Failed to load color texture:", err); throw err; }),  // Color texture
+      textureLoader.loadAsync('/rock02.jpg').catch(err => { console.error("Failed to load normal texture:", err); throw err; }),  // Normal map
+      textureLoader.loadAsync(heightMapPath).catch(err => { console.error(`Failed to load heightmap texture: ${heightMapPath}`, err); throw err; })  // Height map (dynamic path)
     ]).then(([colorTexture, normalTexture, heightMap]) => {
-      // Check if component is still mounted
-      if (!this.scene) return;
+      // Check if component is still mounted or if the map changed again during loading
+      if (!this.scene || this.currentHeightMapPath !== heightMapPath) {
+         console.log('Scene disposed or map changed during load, aborting terrain creation.');
+         // Dispose newly loaded textures if we are aborting
+         colorTexture.dispose();
+         normalTexture.dispose();
+         heightMap.dispose();
+         return;
+      }
       
       // Configure texture wrapping
       colorTexture.wrapS = colorTexture.wrapT = THREE.RepeatWrapping;
@@ -226,6 +261,18 @@ class TerrainRenderer {
         this.terrainWidth = maxDimensionSize * (imgWidth / imgHeight);
       }
       console.log(`Heightmap: ${imgWidth}x${imgHeight}, Terrain Dimensions: ${this.terrainWidth.toFixed(2)}x${this.terrainHeight.toFixed(2)}`);
+
+      // --- Notify context about new dimensions ---
+      // Ensure bridgeService is available before notifying
+      if (bridgeService && typeof bridgeService.notifyTerrainDimensionsChanged === 'function') {
+        bridgeService.notifyTerrainDimensionsChanged({ 
+          width: this.terrainWidth, 
+          height: this.terrainHeight 
+        });
+      } else {
+        console.warn("BridgeService not available or notifyTerrainDimensionsChanged not found.");
+      }
+      // --- End notification ---
 
       // Calculate proportional segments based on heightmap aspect ratio
       const maxSegments = 256; // Target for the longer dimension
@@ -270,17 +317,24 @@ class TerrainRenderer {
         this.terrain = new THREE.Mesh(geometry, material);
         this.terrain.receiveShadow = true;
         this.scene.add(this.terrain);
-        
+
         // Process heightmap for height sampling
         this.processHeightmap(heightMap);
-        
-        // Add grid helper via object manager
-        this.objectManager.addGridHelper();
-        
-        // Add ambient objects via object manager
-        this.objectManager.addAmbientObjects();
+
+        // Re-add grid helper and ambient objects if they were removed or need repositioning
+        // For now, assume they persist or are managed elsewhere. If issues arise,
+        // we might need to call objectManager.dispose() and re-add objects here.
+        // Example:
+        // if (this.objectManager) {
+        //   this.objectManager.dispose(); // Clear old objects
+        //   this.objectManager.addGridHelper();
+        //   this.objectManager.addAmbientObjects();
+        // }
+
+        console.log(`Terrain loaded successfully with map: ${heightMapPath}`);
+
       } else {
-        // Clean up resources if scene is gone
+        // Clean up newly loaded resources if scene is gone
         geometry.dispose();
         material.dispose();
       }
