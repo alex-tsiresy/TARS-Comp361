@@ -4,40 +4,66 @@ import '../styles/MarsRoverPage.css';
 import { useRobots } from '../context/RobotContext';
 // No need for useLocation/useNavigate if using window.location
 
-// Define available maps - Only include maps from the /maps directory
-const availableMaps = [
-  { name: 'Crater DTEPC 058362', path: '/maps/DTEPC_058362_1070_057650_1070_A01.png' },
-  { name: 'Valley DTEPD 063394', path: '/maps/DTEPD_063394_2485_063526_2485_A01.png' },
-];
+// Function to derive a display name from a map filename
+const getMapNameFromFilename = (filename) => {
+  if (!filename) return 'Unknown Map';
+  // Remove extension and replace underscores with spaces
+  return filename.replace(/\.png$/i, '').replace(/_/g, ' ');
+};
+
+// Use Vite's import.meta.glob to dynamically get map files from the public directory
+// The keys will be the paths relative to the project root (e.g., /public/maps/...)
+const mapFiles = import.meta.glob('/public/maps/*.png');
+
+// Process the glob result to create the availableMaps array
+const availableMaps = Object.keys(mapFiles).map(path => {
+  // Extract filename from the path (e.g., /public/maps/DTEPC_...png -> DTEPC_...png)
+  const filename = path.split('/').pop();
+  // Construct the public path accessible by the browser (remove /public prefix)
+  const publicPath = path.replace(/^\/public/, '');
+  return {
+    name: getMapNameFromFilename(filename),
+    path: publicPath // Use the correct public path
+  };
+});
+
+// Sort maps alphabetically by name for consistency
+availableMaps.sort((a, b) => a.name.localeCompare(b.name));
+
 
 const MarsRoverPage = () => {
   const [taskInput, setTaskInput] = useState('');
+  // State to hold the list of available maps - initialize directly from glob result
+  const [maps, setMaps] = useState(availableMaps);
+
   const [speedInput, setSpeedInput] = useState('0.5');
   const [sensorRangeInput, setSensorRangeInput] = useState('100');
   const [turnRateInput, setTurnRateInput] = useState('0.05');
   const [batteryCapacityInput, setBatteryCapacityInput] = useState('100');
 
-  // Function to get map path from URL query param or default
-  const getMapPathFromQuery = () => {
+  // Function to get map path from URL query param or default, using the maps state
+  const getMapPathFromQuery = useCallback((currentMaps) => {
+    if (!currentMaps || currentMaps.length === 0) {
+      console.log("getMapPathFromQuery called before maps are loaded or maps list is empty.");
+      return null; // Return null if maps aren't ready
+    }
     const params = new URLSearchParams(window.location.search);
     const mapParam = params.get('map');
-    // Validate if the mapParam is one of the available maps
-    // Validate if the mapParam is one of the available maps
-    const foundMap = availableMaps.find(map => map.path === mapParam);
+    // Validate if the mapParam is one of the available maps from state
+    const foundMap = currentMaps.find(map => map.path === mapParam);
     if (foundMap) {
       console.log(`Map found in URL: ${foundMap.path}`);
       return foundMap.path;
     }
     // Default to the first map in the list if URL param is missing or invalid
-    // Ensure the list is not empty before accessing index 0
-    const defaultPath = availableMaps.length > 0 ? availableMaps[0].path : null;
+    const defaultPath = currentMaps.length > 0 ? currentMaps[0].path : null;
     console.log(`No valid map in URL or list empty, defaulting to: ${defaultPath}`);
-    // Return the default path (which could be null if the list is empty)
     return defaultPath;
-  };
+  }, []); // No dependencies needed for the function itself
 
-  // Initialize state from query param
-  const [selectedMapPath, setSelectedMapPath] = useState(getMapPathFromQuery());
+  // Initialize state from query param, using the directly initialized maps state
+  const [selectedMapPath, setSelectedMapPath] = useState(() => getMapPathFromQuery(maps));
+
   // Use state and callback refs instead of useRef
   const [firstPersonViewElement, setFirstPersonViewElement] = useState(null);
   const [radarViewElement, setRadarViewElement] = useState(null);
@@ -234,12 +260,17 @@ const MarsRoverPage = () => {
             value={selectedMapPath} 
             onChange={handleMapChange}
             className="map-select-dropdown"
+            disabled={maps.length === 0} // Disable if maps haven't loaded
           >
-            {availableMaps.map(map => (
-              <option key={map.path} value={map.path}>
-                {map.name}
-              </option>
-            ))}
+            {maps.length === 0 ? (
+              <option>Loading maps...</option>
+            ) : (
+              maps.map(map => (
+                <option key={map.path} value={map.path}>
+                  {map.name}
+                </option>
+              ))
+            )}
           </select>
         </div>
       </div>
