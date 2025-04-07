@@ -111,7 +111,8 @@ const MarsRoverPage = () => {
       setTurnRateInput(selectedRobot.capabilities.turnRate?.toString() || '0.05');
       setBatteryCapacityInput(selectedRobot.capabilities.batteryCapacity?.toString() || '100');
     }
-  }, [selectedRobot]);
+    // Only run this effect when the selected robot ID changes, not on every capability update
+  }, [selectedRobot?.id]); 
   
   // Handle behavior selection - now directly sets the task
   const handleBehaviorSelect = (behavior, params = {}) => {
@@ -289,12 +290,12 @@ const MarsRoverPage = () => {
                 
                 <div className="capability-controls">
                   <div className="speed-control">
-                    <label htmlFor="speed-input">Speed:</label>
+                    <label htmlFor="speed-input">Speed (m/s):</label>
                     <input
                       id="speed-input"
                       type="number"
                       min="0.1"
-                      max="2"
+                      max="10.0"  // Updated max
                       step="0.1"
                       value={speedInput}
                       onChange={(e) => setSpeedInput(e.target.value)}
@@ -310,12 +311,12 @@ const MarsRoverPage = () => {
                   </div>
                   
                   <div className="capacity-control">
-                    <label htmlFor="sensor-range-input">Sensor Range:</label>
+                    <label htmlFor="sensor-range-input">Sensor Range (m):</label>
                     <input
                       id="sensor-range-input"
                       type="number"
                       min="10"
-                      max="500"
+                      max="500" // Range already correct
                       step="10"
                       value={sensorRangeInput}
                       onChange={(e) => setSensorRangeInput(e.target.value)}
@@ -331,12 +332,12 @@ const MarsRoverPage = () => {
                   </div>
                   
                   <div className="capacity-control">
-                    <label htmlFor="turn-rate-input">Turn Rate:</label>
+                    <label htmlFor="turn-rate-input">Turn Rate (rad/s):</label>
                     <input
                       id="turn-rate-input"
                       type="number"
                       min="0.01"
-                      max="0.5"
+                      max="1.0" // Updated max
                       step="0.01"
                       value={turnRateInput}
                       onChange={(e) => setTurnRateInput(e.target.value)}
@@ -352,12 +353,12 @@ const MarsRoverPage = () => {
                   </div>
                   
                   <div className="capacity-control">
-                    <label htmlFor="battery-capacity-input">Battery:</label>
+                    <label htmlFor="battery-capacity-input">Battery (units):</label>
                     <input
                       id="battery-capacity-input"
                       type="number"
                       min="50"
-                      max="500"
+                      max="500" // Range already correct
                       step="10"
                       value={batteryCapacityInput}
                       onChange={(e) => setBatteryCapacityInput(e.target.value)}

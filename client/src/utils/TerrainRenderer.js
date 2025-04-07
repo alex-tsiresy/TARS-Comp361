@@ -120,8 +120,12 @@ class TerrainRenderer {
     // View manager for robot-specific views (first-person and radar)
     this.viewManager = new RobotViewManager(this.scene, this, this.robotManager);
     
-    // Define terrain size (used by various managers)
-    this.terrainSize = 2000;
+    // Define terrain vertical displacement scale
+    this.displacementScale = 300;
+    
+    // Terrain dimensions will be set dynamically after loading the heightmap
+    this.terrainWidth = 0;
+    this.terrainHeight = 0;
   }
   
   /**
@@ -198,21 +202,63 @@ class TerrainRenderer {
       colorTexture.repeat.set(50, 50);
       normalTexture.repeat.set(50, 50);
       
-      // Create terrain geometry
+      // Calculate proportional segments based on heightmap aspect ratio
+      // Configure texture wrapping
+      colorTexture.wrapS = colorTexture.wrapT = THREE.RepeatWrapping;
+      normalTexture.wrapS = normalTexture.wrapT = THREE.RepeatWrapping;
+      colorTexture.repeat.set(50, 50);
+      normalTexture.repeat.set(50, 50);
+
+      // --- Calculate dynamic terrain dimensions ---
+      const imgWidth = heightMap.image.width;
+      const imgHeight = heightMap.image.height;
+      const maxDimensionSize = 2000; // Set the size for the larger dimension
+
+      if (imgWidth === 0 || imgHeight === 0) {
+        console.warn("Heightmap image has zero dimensions. Falling back to default size.");
+        this.terrainWidth = maxDimensionSize;
+        this.terrainHeight = maxDimensionSize;
+      } else if (imgWidth >= imgHeight) {
+        this.terrainWidth = maxDimensionSize;
+        this.terrainHeight = maxDimensionSize * (imgHeight / imgWidth);
+      } else {
+        this.terrainHeight = maxDimensionSize;
+        this.terrainWidth = maxDimensionSize * (imgWidth / imgHeight);
+      }
+      console.log(`Heightmap: ${imgWidth}x${imgHeight}, Terrain Dimensions: ${this.terrainWidth.toFixed(2)}x${this.terrainHeight.toFixed(2)}`);
+
+      // Calculate proportional segments based on heightmap aspect ratio
+      const maxSegments = 256; // Target for the longer dimension
+      let widthSegments, heightSegments;
+
+      if (imgWidth === 0 || imgHeight === 0) {
+        widthSegments = 256; // Fallback
+        heightSegments = 256;
+      } else if (imgWidth >= imgHeight) {
+        widthSegments = maxSegments;
+        heightSegments = Math.max(1, Math.round(maxSegments * (imgHeight / imgWidth)));
+      } else {
+        heightSegments = maxSegments;
+        widthSegments = Math.max(1, Math.round(maxSegments * (imgWidth / imgHeight)));
+      }
+      console.log(`Segments: ${widthSegments}x${heightSegments}`);
+
+      // Create terrain geometry using dynamic dimensions and proportional segments
+      // Subtract 1 because PlaneGeometry takes segment counts, not vertex counts
       const geometry = new THREE.PlaneGeometry(
-        this.terrainSize, 
-        this.terrainSize, 
-        256, 
-        256
+        this.terrainWidth,
+        this.terrainHeight,
+        widthSegments - 1,
+        heightSegments - 1
       );
       geometry.rotateX(-Math.PI / 2); // Make it horizontal
-      
+
       // Create terrain material - add some emissive for better visibility
       const material = new THREE.MeshStandardMaterial({
         map: colorTexture,
         normalMap: normalTexture,
         displacementMap: heightMap,
-        displacementScale: 300,
+        displacementScale: this.displacementScale,
         roughness: 0.8,
         metalness: 0.2,
         emissive: 0x111111, // Very subtle emissive
@@ -275,12 +321,14 @@ class TerrainRenderer {
     
     try {
       // Convert world coordinates to terrain grid coordinates
-      const gridSize = this.terrainSize / 2;
-      
-      // Normalize x and z to 0-1 range
-      const normalizedX = (x + gridSize) / this.terrainSize;
-      const normalizedZ = (z + gridSize) / this.terrainSize;
-      
+      // Use separate width and height
+      const gridWidth = this.terrainWidth / 2;
+      const gridHeight = this.terrainHeight / 2; // Corresponds to Z dimension in world space
+
+      // Normalize x and z to 0-1 range based on dynamic dimensions
+      const normalizedX = (x + gridWidth) / this.terrainWidth;
+      const normalizedZ = (z + gridHeight) / this.terrainHeight; // Use terrainHeight for Z
+
       // Calculate pixel coordinates in the heightmap
       const pixelX = Math.floor(normalizedX * this.heightmapWidth);
       const pixelZ = Math.floor(normalizedZ * this.heightmapHeight);
@@ -297,14 +345,21 @@ class TerrainRenderer {
       const heightValue = this.heightmapData[pixelIndex];
       
       // Scale height value (0-255) to terrain height
-      // Assuming max height is 300 (from displacementScale)
-      const terrainHeight = (heightValue / 255) * 300;
+      // Use the defined displacement scale
+      const terrainHeight = (heightValue / 255) * this.displacementScale;
       
       return terrainHeight;
     } catch (error) {
       console.error('Error calculating height from heightmap:', error);
       return 0;
     }
+  }
+
+  /**
+   * Get the dynamic terrain dimensions
+   */
+  getTerrainDimensions() {
+    return { width: this.terrainWidth, height: this.terrainHeight };
   }
   
   /**
@@ -497,4 +552,4 @@ class TerrainRenderer {
   }
 }
 
-export default TerrainRenderer; 
+export default TerrainRenderer;

@@ -90,7 +90,7 @@ class RobotBehaviors {
       
       // Randomize speed with a preference for consistent motion
       const speedVariance = 0.2; // Only vary speed by 20%
-      const baseSpeed = robot.capabilities.maxSpeed * 0.9; // Base at 90% of max speed
+      const baseSpeed = robot.capabilities.maxSpeed * 0.4; // Lower base speed for random behavior
       const speedAdjustment = (Math.random() * 2 - 1) * speedVariance;
       robot.targetSpeed = baseSpeed * (1 + speedAdjustment);
     }
@@ -98,8 +98,8 @@ class RobotBehaviors {
     // Update direction and speed
     this.robotManager.movement.smoothlyUpdateDirectionAndSpeed(robot, deltaTime);
     
-    // Apply movement at full strength
-    const moveFactor = 1.2; // Boost straight-line movement
+    // Apply movement with further reduced factor for even slower visual speed
+    const moveFactor = 0.1; // Further reduced from 0.5
     robot.position.x += robot.direction.x * robot.speed * moveFactor;
     robot.position.z += robot.direction.z * robot.speed * moveFactor;
   }
@@ -490,4 +490,4 @@ class RobotBehaviors {
 
 }
 
-export default RobotBehaviors; 
+export default RobotBehaviors;

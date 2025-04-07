@@ -20,7 +20,8 @@ const actions = {
 const initialState = {
   robots: {}, // Map of robotId -> robotData
   selectedRobotId: null,
-  renderer: null
+  renderer: null,
+  terrainDimensions: { width: 0, height: 0 } // Add terrain dimensions
 };
 
 // Reducer function using Immer to handle state updates
@@ -49,6 +50,13 @@ function robotReducer(state, action) {
       
       case actions.SET_RENDERER:
         draft.renderer = action.payload;
+        // Also fetch and store terrain dimensions when renderer is set
+        if (action.payload && typeof action.payload.getTerrainDimensions === 'function') {
+          draft.terrainDimensions = action.payload.getTerrainDimensions();
+          console.log('RobotContext: Terrain dimensions set:', draft.terrainDimensions);
+        } else {
+          draft.terrainDimensions = { width: 0, height: 0 }; // Reset if renderer is null or invalid
+        }
         break;
         
       case actions.SET_ROBOT_CAPABILITIES:
@@ -235,6 +243,7 @@ export const RobotProvider = ({ children }) => {
     selectedRobotId: state.selectedRobotId,
     selectedRobot,
     renderer: state.renderer,
+    terrainDimensions: state.terrainDimensions, // Expose terrain dimensions
     
     // Actions
     addRobotAtPosition,
@@ -257,4 +266,4 @@ export const useRobots = () => {
     throw new Error('useRobots must be used within a RobotProvider');
   }
   return context;
-}; 
+};

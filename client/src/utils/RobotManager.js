@@ -100,8 +100,8 @@ class RobotManager {
       },
       // Add missing properties for robot movement/direction
       direction: directionVector, // Initial direction vector
-      speed: 0.5, // Start with a higher initial speed (increased from 0.3)
-      targetSpeed: 1.0, // Higher target speed for more obvious movement (increased from 0.8)
+      speed: 0.2, // Lower initial speed
+      targetSpeed: 0.5, // Lower initial target speed
       targetDirection: { x: directionVector.x, z: directionVector.z }, // For smooth turning
       moveTimer: 0,
       moveInterval: Math.random() * 1500 + 800, // Even shorter intervals for more frequent direction changes
@@ -110,12 +110,12 @@ class RobotManager {
       forceVisible: true,
       // New properties for enhanced capabilities and behavior
       capabilities: {
-        maxSpeed: 1.0, // Increased max speed to 1.0 from 0.8
+        maxSpeed: 5.0, // Set a higher default speed within the new range (0.1-10.0)
         turnRate: 0.08, // Higher turn rate for more responsive turning (from 0.06)
         sensorRange: 120, // Slightly increased sensor range
         batteryLevel: 100,
         batteryCapacity: 100,
-        batteryDrainRate: 0.01
+        batteryDrainRate: 0.5 // Increased drain rate
       },
       behaviorGoal: 'random', // Default goal: random movement
       behaviorState: {
@@ -515,13 +515,14 @@ class RobotManager {
   // Validate and normalize robot capabilities
   validateCapabilities(robot) {
     // Ensure all capabilities are within reasonable ranges
-    robot.capabilities.maxSpeed = Math.max(0.1, Math.min(2.0, robot.capabilities.maxSpeed));
-    robot.capabilities.turnRate = Math.max(0.01, Math.min(0.15, robot.capabilities.turnRate));
-    robot.capabilities.sensorRange = Math.max(10, Math.min(500, robot.capabilities.sensorRange));
-    robot.capabilities.batteryCapacity = Math.max(50, Math.min(500, robot.capabilities.batteryCapacity));
+    // Updated ranges based on user request (adjusted for simulation context)
+    robot.capabilities.maxSpeed = Math.max(0.1, Math.min(10.0, robot.capabilities.maxSpeed)); // Range: 0.1 - 10.0 m/s
+    robot.capabilities.turnRate = Math.max(0.01, Math.min(1.0, robot.capabilities.turnRate)); // Range: 0.01 - 1.0 rad/s
+    robot.capabilities.sensorRange = Math.max(10, Math.min(500, robot.capabilities.sensorRange)); // Range: 10 - 500 m
+    robot.capabilities.batteryCapacity = Math.max(50, Math.min(500, robot.capabilities.batteryCapacity)); // Range: 50 - 500 units
     robot.capabilities.batteryLevel = Math.max(0, Math.min(robot.capabilities.batteryCapacity, 
                                                            robot.capabilities.batteryLevel));
-    robot.capabilities.batteryDrainRate = Math.max(0.001, Math.min(0.05, robot.capabilities.batteryDrainRate));
+    robot.capabilities.batteryDrainRate = Math.max(0.001, Math.min(0.1, robot.capabilities.batteryDrainRate)); // Increased max drain rate
   }
   
   // Set robot behavior goal directly (internal use)
@@ -555,7 +556,7 @@ class RobotManager {
           robot.targetSpeed = 0;
           break;
         case 'random':
-          robot.targetSpeed = robot.capabilities.maxSpeed * 0.7;
+          robot.targetSpeed = robot.capabilities.maxSpeed * 0.3; // Lower target speed for random behavior
           break;
         case 'findRocks':
           robot.targetSpeed = robot.capabilities.maxSpeed * 0.8;

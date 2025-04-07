@@ -30,14 +30,35 @@ class RobotMovement {
       
       // Update direction and speed
       this.smoothlyUpdateDirectionAndSpeed(robot, deltaTime);
-      
-      // Apply movement - use more directional force for forward movement
-      const forwardBias = 1.2; // Prefer forward movement even during turns
-      robot.position.x += robot.direction.x * robot.speed * forwardBias;
-      robot.position.z += robot.direction.z * robot.speed * forwardBias;
+      // Calculate potential next position with reduced factor for slower visual speed
+      const forwardBias = 0.5; // Significantly reduced from 1.2
+      const potentialX = robot.position.x + robot.direction.x * robot.speed * forwardBias;
+      const potentialZ = robot.position.z + robot.direction.z * robot.speed * forwardBias;
+
+      // Get terrain boundaries
+      const terrainDimensions = this.robotManager.terrainRenderer.getTerrainDimensions();
+      const halfWidth = terrainDimensions.width / 2;
+      const halfHeight = terrainDimensions.height / 2; // Corresponds to Z dimension
+
+      // Check boundaries and apply movement only if within bounds
+      if (potentialX >= -halfWidth && potentialX <= halfWidth &&
+          potentialZ >= -halfHeight && potentialZ <= halfHeight) {
+        robot.position.x = potentialX;
+        robot.position.z = potentialZ;
+      } else {
+        // Stop the robot and make it turn around
+        robot.targetSpeed = 0;
+        robot.speed = 0;
+        // Set target direction to opposite of current direction
+        robot.targetDirection = { 
+          x: -robot.direction.x, 
+          z: -robot.direction.z 
+        };
+        console.log(`Robot ${robot.id} hit boundary and is turning around.`);
+      }
     }
   }
-  
+
   // Handle smooth direction and speed changes
   smoothlyUpdateDirectionAndSpeed(robot, deltaTime) {
     // Update direction
@@ -75,7 +96,7 @@ class RobotMovement {
   // Update robot speed with simple acceleration
   _updateSpeed(robot, deltaTime) {
     const speedDiff = robot.targetSpeed - robot.speed;
-    const acceleration = 0.3; // Increased from 0.2 for faster acceleration
+    const acceleration = 0.1; // Reduced acceleration for slower speed changes
     
     // Apply speed change
     robot.speed += speedDiff * Math.min(1, acceleration * deltaTime / 100);
@@ -87,4 +108,4 @@ class RobotMovement {
   }
 }
 
-export default RobotMovement; 
+export default RobotMovement;
