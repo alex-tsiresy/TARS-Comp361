@@ -5,7 +5,7 @@ const cors = require("cors");
 
 const app = express();
 const authRoutes = require("./routes/authRoutes");
-
+const imageRoutes = require("./routes/imageRoutes");
 
 // Start the server
 const PORT = process.env.PORT || 5005;
@@ -27,14 +27,14 @@ const connectDB = async () => {
 const corsOptions = {
   origin: ["http://localhost:5173"],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true, // Allow cookies or auth headers
+  credentials: true, 
 };
 
 // Middleware
-app.use(cors(corsOptions)); // Enable CORS
-app.use(express.json()); // Parse JSON data in requests
+app.use(cors(corsOptions)); 
+app.use(express.json()); 
 
 // Routes
-app.use("/api/auth", authRoutes); // Auth routes
-
+app.use("/api/auth", authRoutes); 
+app.use("/api/images", imageRoutes);
 
