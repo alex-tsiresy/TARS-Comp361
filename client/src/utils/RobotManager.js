@@ -318,10 +318,6 @@ class RobotManager {
     
     // Different behaviors may have different energy costs
     switch (robot.behaviorGoal) {
-      case 'findRocks':
-        // Scanning for rocks uses sensors, which uses more energy
-        drainAmount += 0.02 * deltaTime / 1000;
-        break;
       case 'patrol':
         // Patrol uses sensors too
         drainAmount += 0.01 * deltaTime / 1000;
@@ -330,8 +326,28 @@ class RobotManager {
         // Standby uses minimal energy
         drainAmount *= 0.5;
         break;
+      case 'findRocks':
+        // Find rocks uses minimal energy
+        drainAmount += 0.02 * deltaTime / 1000;
+        break;
+      case 'findWater':
+        // Find water uses minimal energy
+        drainAmount *= 0.5;
+        break;
+      case 'findFlatSurface':
+        // Find flat surface uses minimal energy
+        drainAmount *= 0.5;
+        break;
+      case 'findGoodWeather':
+        // Find good weather uses minimal energy
+        drainAmount *= 0.5;
+        break;
+      case 'findGoodSoil':
+        // Find good soil uses minimal energy
+        drainAmount *= 0.5;
+        break;
+      
     }
-    
     // Apply drain
     robot.capabilities.batteryLevel = Math.max(0, robot.capabilities.batteryLevel - drainAmount);
     

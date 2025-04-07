@@ -484,7 +484,7 @@ canvas {
   border: 1px solid rgba(255, 222, 3, 0.2);
 }
 
-/* Enhanced responsive adjustments */
+/* Responsive adjustments */
 @media (max-width: 1200px) {
   .mars-rover-page {
     flex-direction: column;

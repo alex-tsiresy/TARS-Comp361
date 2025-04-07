@@ -18,21 +18,35 @@ class RobotBehaviors {
     
     // Apply appropriate behavior based on the goal - only keep behaviors that are directly in the UI
     switch (robot.behaviorGoal) {
+      // Random movement behavior
       case 'random':
         this.applyRandomBehavior(robot, deltaTime);
         break;
+      // Patrol behavior
       case 'patrol':
         this.applyPatrolBehavior(robot, deltaTime);
         break;
+      // Find rocks behavior
       case 'findRocks':
         this.applyFindRocksBehavior(robot, deltaTime);
         break;
+      // Find water behavior
       case 'findWater':
         this.applyFindWaterBehavior(robot, deltaTime);
         break;
+      // Find flat surface behavior
       case 'findFlatSurface':
         this.applyFindFlatSurfaceBehavior(robot, deltaTime);
         break;
+      // Find good weather behavior
+      case 'findGoodWeather':
+        this.applyFindGoodWeatherBehavior(robot, deltaTime);
+        break;
+      // Find good soil behavior
+      case 'findGoodSoil':
+        this.applyFindGoodSoilBehavior(robot, deltaTime);
+        break;
+      // Standby behavior
       case 'standby':
         // Do nothing, robot stays in place
         robot.speed = 0;
@@ -104,8 +118,9 @@ class RobotBehaviors {
     robot.position.z += robot.direction.z * robot.speed * moveFactor;
   }
   
-  // Patrol behavior - simplified square path
+  // Patrol behavior
   applyPatrolBehavior(robot, deltaTime) {
+
     // Initialize patrol points if not set
     if (robot.behaviorState.patrolPoints.length === 0) {
       // Create a simple square patrol path around current position
@@ -155,7 +170,7 @@ class RobotBehaviors {
     }
   }
   
-  // Find rocks behavior - simplified scanning behavior
+  // Find rocks behavior
   applyFindRocksBehavior(robot, deltaTime) {
     // Check if we have a target rock position
     if (!robot.behaviorState.targetPosition) {
@@ -223,7 +238,7 @@ class RobotBehaviors {
       }
     }
   }
-  // Find water behavior - simulates searching for water sources
+  // Find water behavior
   applyFindWaterBehavior(robot, deltaTime) {
     // Check if we have a target water position
     if (!robot.behaviorState.targetPosition) {
@@ -302,7 +317,7 @@ class RobotBehaviors {
     }
   }
   
-  // Find flat surface behavior - simulates searching for suitable landing or construction areas
+  // Find flat surface behavior
   applyFindFlatSurfaceBehavior(robot, deltaTime) {
     // Check if we have a target flat surface position
     if (!robot.behaviorState.targetPosition) {
@@ -383,7 +398,7 @@ class RobotBehaviors {
     }
   }
 
-  // Find good weather behavior - searches for areas with optimal weather conditions
+  // Find good weather behavior
   applyFindGoodWeatherBehavior(robot, deltaTime) {
     if (!robot.behaviorState.targetPosition) {
       if (robot.behaviorState.thinkTime > 500) {
