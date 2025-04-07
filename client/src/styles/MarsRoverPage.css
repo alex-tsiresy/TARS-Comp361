@@ -448,7 +448,7 @@ canvas {
   border: 1px solid rgba(255, 222, 3, 0.2);
 }
 
-/* Media query for smaller screens */
+/* Enhanced responsive adjustments */
 @media (max-width: 1200px) {
   .mars-rover-page {
     flex-direction: column;
@@ -456,13 +456,180 @@ canvas {
   
   .terrain-panel, .info-panel {
     width: 100%;
-    height: 50vh;
     max-width: none;
   }
   
   .terrain-panel {
+    height: 50vh;
     border-right: none;
     border-bottom: 2px solid #ffde03;
+  }
+  
+  .info-panel {
+    height: 50vh;
+    overflow-y: auto;
+  }
+  
+  .robot-views {
+    flex-direction: row;
+    gap: 10px;
+  }
+  
+  .view-container {
+    flex: 1;
+  }
+  
+  .first-person-view, .radar-view {
+    height: 150px;
+  }
+}
+
+@media (max-width: 768px) {
+  .robot-views {
+    flex-direction: column;
+  }
+  
+  .robot-details h2, .view-container h3 {
+    font-size: 1.1rem;
+  }
+  
+  .detail-content p {
+    font-size: 0.9rem;
+  }
+  
+  .behavior-buttons {
+    flex-wrap: wrap;
+  }
+  
+  .behavior-button {
+    min-width: 70px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .capability-controls {
+    gap: 5px;
+  }
+  
+  .speed-control, .capacity-control {
+    flex-wrap: wrap;
+  }
+  
+  .speed-control label, .capacity-control label {
+    min-width: 80px;
+    font-size: 0.8rem;
+  }
+  
+  .capacity-input {
+    width: 60px;
+    padding: 6px;
+  }
+  
+  .apply-capacity {
+    padding: 6px 8px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .terrain-panel {
+    height: 40vh;
+  }
+  
+  .info-panel {
+    height: 60vh;
+    padding: 10px;
+  }
+  
+  .robot-details, .view-container, .behavior-controls {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .first-person-view, .radar-view {
+    height: 120px;
+  }
+  
+  .view-label {
+    font-size: 10px;
+    padding: 2px 5px;
+  }
+  
+  .behavior-button {
+    min-width: 60px;
+    padding: 5px 8px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Adjust for landscape orientation on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .terrain-panel {
+    height: 60vh;
+  }
+  
+  .info-panel {
+    height: 40vh;
+  }
+  
+  .robot-views {
+    flex-direction: row;
+    gap: 10px;
+  }
+  
+  .view-container {
+    flex: 1;
+  }
+  
+  .first-person-view, .radar-view {
+    height: 100px;
+  }
+  
+  .robot-details {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .detail-content p {
+    margin: 4px 0;
+    font-size: 0.8rem;
+  }
+  
+  .behavior-controls {
+    padding: 10px;
+  }
+  
+  .behavior-buttons {
+    gap: 5px;
+  }
+}
+
+/* Adjust for very large screens */
+@media (min-width: 1440px) and (min-height: 900px) {
+  .terrain-panel {
+    flex: 4;
+  }
+  
+  .info-panel {
+    flex: 1;
+    max-width: 450px;
+  }
+  
+  .first-person-view, .radar-view {
+    height: 220px;
+  }
+  
+  .robot-details h2, .view-container h3 {
+    font-size: 1.4rem;
+  }
+  
+  .detail-content p {
+    font-size: 1.1rem;
+  }
+  
+  .behavior-button {
+    padding: 10px 15px;
+    font-size: 1rem;
   }
 }
 

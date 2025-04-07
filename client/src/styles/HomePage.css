@@ -304,19 +304,120 @@
   z-index: 2;
 }
 
-/* Responsive adjustments */
+/* Enhanced responsive adjustments */
 @media (max-width: 768px) {
   .glitch-text {
-    font-size: 3rem;
+    font-size: 2.5rem;
+    letter-spacing: 3px;
   }
   
   .subtitle {
     font-size: 1.2rem;
   }
   
+  .control-panel {
+    width: 90%;
+    padding: 20px 15px;
+  }
+  
   .coordinates-footer {
     flex-direction: column;
     align-items: center;
     gap: 5px;
+    padding: 10px 0;
+  }
+  
+  .mission-status {
+    font-size: 12px;
+  }
+  
+  .glitch-container {
+    margin-top: 5vh;
+  }
+  
+  .login-content {
+    width: 95%;
+    padding: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .glitch-text {
+    font-size: 2rem;
+    letter-spacing: 2px;
+  }
+  
+ .subtitle {
+    font-size: 1rem;
+  }
+  
+  .button-text {
+    font-size: 14px;
+  }
+  
+  .control-button {
+    padding: 10px 15px;
+  }
+  
+  .login-header h3 {
+    font-size: 1rem;
+  }
+}
+
+/* Adjust for taller screens */
+@media (min-height: 900px) {
+  .glitch-container {
+    margin-top: 15vh;
+  }
+  
+  .control-panel {
+    margin-top: 5vh;
+  }
+}
+
+/* Adjust for landscape orientation on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .glitch-container {
+    margin-top: 2vh;
+  }
+  
+  .glitch-text {
+    font-size: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+    margin-top: 0;
+  }
+  
+  .control-panel {
+    padding: 15px 10px;
+  }
+  
+  .panel-section {
+    gap: 8px;
+  }
+  
+  .control-button {
+    padding: 8px 15px;
+  }
+  
+  .coordinates-footer {
+    padding: 5px 0;
+  }
+}
+
+/* Adjust for very large screens */
+@media (min-width: 1440px) {
+  .control-panel {
+    max-width: 700px;
+  }
+  
+  .glitch-text {
+    font-size: 5.5rem;
+  }
+  
+  .subtitle {
+    font-size: 1.8rem;
   }
 }

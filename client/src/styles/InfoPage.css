@@ -265,11 +265,15 @@
   .info-header .title {
     font-size: 1.8rem;
     margin-top: 50px;
+    padding: 0 10px;
+    text-align: center;
   }
   
   .back-button {
     top: 20px;
     left: 10px;
+    padding: 6px 10px;
+    font-size: 12px;
   }
   
   .card-title {
@@ -280,11 +284,65 @@
     flex-direction: column;
     align-items: center;
     gap: 5px;
+    padding: 10px 0;
+  }
+  
+  .info-content {
+    padding: 0 15px 40px;
+  }
+  
+  .info-card {
+    padding: 15px;
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 769px) and (max-width: 1024px) {
+  .info-header .title {
+    font-size: 2.2rem;
+  }
+  
+  .info-content {
+    padding: 10px 30px 60px;
+  }
+}
+
+@media (min-width: 1025px) {
   .info-content {
     padding: 20px 50px 80px;
+    max-width: 1200px;
+  }
+}
+
+/* Adjust for very small screens */
+@media (max-width: 480px) {
+  .info-header .title {
+    font-size: 1.5rem;
+  }
+  
+  .mission-status {
+    font-size: 12px;
+  }
+  
+  .card-content {
+    font-size: 0.9rem;
+  }
+  
+  .control-list li {
+    padding-left: 15px;
+  }
+}
+
+/* Adjust for landscape orientation on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .info-header {
+    padding: 60px 20px 20px;
+  }
+  
+  .info-content {
+    padding: 0 20px 30px;
+  }
+  
+  .coordinates-footer {
+    padding: 8px 0;
   }
 } 
