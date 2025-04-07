@@ -17,7 +17,6 @@ function HomePage() {
 
     const [showLogin, setShowLogin] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token")); 
-    const [showLogoutModal, setShowLogoutModal] = useState(false); 
     const [logoutStep, setLogoutStep] = useState(0); 
 
     const [glitchText, setGlitchText] = useState('MARS ROVER');
@@ -38,14 +37,13 @@ function HomePage() {
             localStorage.setItem("token", token);
             setMessage("Login successful! Welcome back.");
             setErrorMessage('');
-            setUsername(''); // Clear username
-            setEmail(''); // Clear email
-            setPassword(''); // Clear password
-            setConfirmPassword(''); // Clear confirmPassword
+            setUsername(''); 
+            setEmail(''); 
+            setPassword(''); 
+            setConfirmPassword(''); 
             setIsLoggedIn(true);
             setSuccessStep(true); 
     
-            // Hide success message and redirect after 2 seconds
             setTimeout(() => {
                 setSuccessStep(false);
                 setShowLogin(false); 
@@ -95,17 +93,16 @@ function HomePage() {
             setIsLoggedIn(true);
             setMessage("Registration successful! Welcome aboard.");
             setErrorMessage('');
-            setUsername(''); // Clear username
-            setEmail(''); // Clear email
-            setPassword(''); // Clear password
-            setConfirmPassword(''); // Clear confirmPassword
+            setUsername(''); 
+            setEmail('');
+            setPassword(''); 
+            setConfirmPassword(''); 
             setSuccessStep(true); 
     
-            // Hide success message and redirect after 2 seconds
             setTimeout(() => {
                 setSuccessStep(false);
-                setShowLogin(false); // Close registration modal
-                navigate("/"); // Redirect to home page
+                setShowLogin(false); 
+                navigate("/"); 
             }, 1500);
         } catch (error) {
             setErrorMessage(error.response?.data?.message || "Registration failed");
@@ -120,7 +117,6 @@ function HomePage() {
         setMessage("You have been logged out successfully.");
         setSuccessStep(true); 
     
-        // Hide success message and redirect after x seconds
         setTimeout(() => {
             setSuccessStep(false);
             setLogoutStep(0); 

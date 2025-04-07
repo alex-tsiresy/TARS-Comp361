@@ -22,9 +22,7 @@ const connectDB = async () => {
     console.error('Error connecting to MongoDB:', error);
     process.exit(1);
   }
-};
-
-connectDB();
+}; connectDB();
 
 const corsOptions = {
   origin: ["http://localhost:5173"],
