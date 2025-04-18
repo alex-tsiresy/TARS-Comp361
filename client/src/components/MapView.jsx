@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import '../styles/MapView.css';
 import { useRobots } from '../context/RobotContext';
+import { getTerrainImages } from '../api/terrainAPI';  // API function to fetch images
 
 // Accept mapPath prop
 const MapView = ({ mapPath }) => { 

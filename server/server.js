@@ -37,6 +37,6 @@ app.use(express.json());
 
 // Routes
 app.use("/api/auth", authRoutes); 
-app.use("/api/images", imageRoutes);
+app.use("/api/terrain-images", imageRoutes);
 app.use("/api/progress", progressRoutes);
 
