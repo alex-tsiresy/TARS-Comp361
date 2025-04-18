@@ -6,6 +6,7 @@ const cors = require("cors");
 const app = express();
 const authRoutes = require("./routes/authRoutes");
 const imageRoutes = require("./routes/imageRoutes");
+const progressRoutes = require("./routes/progressRoutes");
 
 // Start the server
 const PORT = process.env.PORT || 5005;
@@ -37,4 +38,5 @@ app.use(express.json());
 // Routes
 app.use("/api/auth", authRoutes); 
 app.use("/api/images", imageRoutes);
+app.use("/api/progress", progressRoutes);
 

@@ -1,14 +1,63 @@
 .mars-rover-page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #000;
+  color: #fff;
+  position: relative;
+}
+
+.page-content {
+  padding-top: 60px; /* Height of the navbar */
+  width: 100%;
+  height: calc(100vh - 60px);
   display: flex;
-  width: 100vw;
-  height: 100vh;
+  flex-direction: row; /* Change to row to keep the original layout */
+}
+
+/* Back button container */
+.back-button-container {
+  position: absolute;
+  top: 70px; /* Adjusted to account for navbar */
+  left: 20px;
+  z-index: 100;
+}
+
+/* Back button styling */
+.back-button {
+  display: flex;
+  align-items: center;
+  background-color: #13130b;
+  color: #ffde03;
+  border: 1px solid #ffde03;
+  border-radius: 3px;
+  padding: 10px 15px;
+  font-size: 14px;
+  text-decoration: none;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
   overflow: hidden;
-  background-color: #0a0a0a;
-  color: #e0e0e0;
-  font-family: 'Arial', sans-serif;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+  text-align: left;
+}
+
+.back-button:hover {
+  background-color: rgba(255, 222, 3, 0.15);
+  box-shadow: 0 0 15px rgba(255, 222, 3, 0.4);
+  transform: translateY(-2px);
+}
+
+.back-button:active {
+  transform: translateY(1px);
+}
+
+.back-button .button-icon {
+  margin-right: 10px;
+  font-size: 16px;
+}
+
+.back-button .button-text {
+  font-weight: bold;
 }
 
 /* Left side - Terrain Panel */
@@ -486,7 +535,7 @@ canvas {
 
 /* Responsive adjustments */
 @media (max-width: 1200px) {
-  .mars-rover-page {
+  .page-content {
     flex-direction: column;
   }
   
@@ -565,6 +614,36 @@ canvas {
     padding: 6px 8px;
     font-size: 0.8rem;
   }
+  
+  /* New layout for robot details and control */
+  .info-panel {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .robot-details {
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 15px;
+  }
+  
+  .control-panel {
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 15px;
+  }
+  
+  .robot-details-and-control {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+  }
+  
+  .robot-views {
+    width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
@@ -595,6 +674,31 @@ canvas {
     min-width: 60px;
     padding: 5px 8px;
     font-size: 0.75rem;
+  }
+  
+  /* Adjust for very small screens */
+  .robot-details-and-control {
+    flex-direction: column;
+  }
+  
+  .robot-details, .control-panel {
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 10px;
+  }
+  
+  /* Make robot details box smaller on very small screens */
+  .robot-details {
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .control-panel {
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
@@ -637,6 +741,17 @@ canvas {
   
   .behavior-buttons {
     gap: 5px;
+  }
+  
+  /* Keep the row layout for landscape */
+  .robot-details-and-control {
+    display: flex;
+    flex-direction: row;
+  }
+  
+  .robot-details, .control-panel {
+    width: 48%;
+    margin-right: 2%;
   }
 }
 
@@ -790,4 +905,76 @@ canvas {
   border-color: #448844;
   color: #aaa;
   cursor: not-allowed;
+}
+
+.loading-progress {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  border: 2px solid #ffde03;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  box-shadow: 0 0 15px rgba(255, 222, 3, 0.5);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 222, 3, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffde03;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 15px;
+}
+
+.loading-progress p {
+  color: #ffde03;
+  font-size: 16px;
+  margin: 0;
+  text-align: center;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mission-restarted-notification {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  border: 2px solid #ffde03;
+  border-radius: 8px;
+  padding: 15px 20px;
+  z-index: 100;
+  box-shadow: 0 0 15px rgba(255, 222, 3, 0.5);
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.mission-restarted-notification p {
+  color: #ffde03;
+  font-size: 16px;
+  margin: 0;
+  text-align: center;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }

@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/HomePage.css';
 import axios from "axios";
+import { useRobots } from '../context/RobotContext';
+import bridgeService from '../context/BridgeService';
+
 
 function HomePage() {
     const [username, setUsername] = useState('');
@@ -21,6 +24,21 @@ function HomePage() {
 
     const [glitchText, setGlitchText] = useState('MARS ROVER');
     const navigate = useNavigate();
+    const { renderer } = useRobots();
+    
+
+    // Clear all robot meshes from the scene and update the RobotManager state
+    const clearAllRobots = () => {
+        localStorage.removeItem("missionState");
+        localStorage.removeItem("selectedRobot");
+        localStorage.removeItem("robotCapabilities");
+        localStorage.removeItem("robotTasks");
+        
+        // Force a complete page reload to reset all state
+        window.location.href = window.location.origin + window.location.pathname;
+        localStorage.removeItem("progressFetched");
+    };
+
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -42,6 +60,7 @@ function HomePage() {
             setPassword(''); 
             setConfirmPassword(''); 
             setIsLoggedIn(true);
+            clearAllRobots();
             setSuccessStep(true); 
     
             setTimeout(() => {
@@ -96,8 +115,9 @@ function HomePage() {
             setUsername(''); 
             setEmail('');
             setPassword(''); 
-            setConfirmPassword(''); 
-            setSuccessStep(true); 
+            setConfirmPassword('');
+            clearAllRobots(); 
+            setSuccessStep(true);
     
             setTimeout(() => {
                 setSuccessStep(false);
@@ -113,10 +133,10 @@ function HomePage() {
     const handleLogout = () => {
         localStorage.removeItem("token");
         setIsLoggedIn(false);
+        clearAllRobots();
         setErrorMessage('');
         setMessage("You have been logged out successfully.");
         setSuccessStep(true); 
-    
         setTimeout(() => {
             setSuccessStep(false);
             setLogoutStep(0); 
@@ -124,9 +144,8 @@ function HomePage() {
         }, 1500);
     };
 
-
     const startLogoutProcess = () => {
-        setLogoutStep(1); 
+        setLogoutStep(1);
     };
 
     const proceedToLogoutConfirmation = () => {
@@ -135,6 +154,11 @@ function HomePage() {
 
     const cancelLogout = () => {
         setLogoutStep(0); 
+    };
+
+    const goToMissionPage = () => {
+        setLogoutStep(0);
+        navigate("/mission");
     };
 
     // Glitch effect for the title
@@ -173,7 +197,7 @@ function HomePage() {
 
             <div className="control-panel">
                 <div className="panel-section">
-                    <Link className="control-button main-button" to="/play">
+                    <Link className="control-button main-button" to="/mission">
                         <span className="button-icon">▶</span>
                         <span className="button-text">INITIATE MISSION</span>
                     </Link>
@@ -301,10 +325,10 @@ function HomePage() {
             {logoutStep === 1 && !successStep && (
                 <div className="login-modal">
                     <div className="logout-content">
-                        <h3>Do you want to save your progress?</h3>
-                        <button className="save-button" onClick={proceedToLogoutConfirmation}>Save Progress</button>
+                        <h3>Please make sure to save your progress before logging out.</h3>
+                        <button className="save-button" onClick={goToMissionPage}>Mission Page</button>
                         <button className="confirm-button" onClick={proceedToLogoutConfirmation}>
-                            Skip
+                            Continue to Logout
                         </button>
                     </div>
                 </div>

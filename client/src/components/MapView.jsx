@@ -128,6 +128,7 @@ const MapView = ({ mapPath }) => {
         {/* Add Robot button removed as per request */}
         <p className="map-instructions">Click anywhere on the map to add a robot. Click on a robot to select it.</p>
       </div>
+      
       <div className="map-view" ref={mapRef} onClick={handleMapClick}>
         {/* Set background image dynamically */}
         <div 

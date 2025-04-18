@@ -1,25 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import MapView from '../components/MapView';
+import MarsNavbar from '../components/MarsNavbar';
 import '../styles/MarsRoverPage.css';
 import { useRobots } from '../context/RobotContext';
-// No need for useLocation/useNavigate if using window.location
+import axios from 'axios';
 
 // Function to derive a display name from a map filename
 const getMapNameFromFilename = (filename) => {
   if (!filename) return 'Unknown Map';
-  // Remove extension and replace underscores with spaces
   return filename.replace(/\.png$/i, '').replace(/_/g, ' ');
 };
 
-// Use Vite's import.meta.glob to dynamically get map files from the public directory
-// The keys will be the paths relative to the project root (e.g., /public/maps/...)
 const mapFiles = import.meta.glob('/public/maps/*.png');
-
-// Process the glob result to create the availableMaps array
 const availableMaps = Object.keys(mapFiles).map(path => {
-  // Extract filename from the path (e.g., /public/maps/DTEPC_...png -> DTEPC_...png)
   const filename = path.split('/').pop();
-  // Construct the public path accessible by the browser (remove /public prefix)
   const publicPath = path.replace(/^\/public/, '');
   return {
     name: getMapNameFromFilename(filename),
@@ -27,19 +21,33 @@ const availableMaps = Object.keys(mapFiles).map(path => {
   };
 });
 
-// Sort maps alphabetically by name for consistency
 availableMaps.sort((a, b) => a.name.localeCompare(b.name));
 
 
+
 const MarsRoverPage = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem("token"));
+  const [missionRestarted, setMissionRestarted] = useState(false);
+
   const [taskInput, setTaskInput] = useState('');
   // State to hold the list of available maps - initialize directly from glob result
   const [maps, setMaps] = useState(availableMaps);
-
   const [speedInput, setSpeedInput] = useState('0.5');
   const [sensorRangeInput, setSensorRangeInput] = useState('100');
   const [turnRateInput, setTurnRateInput] = useState('0.05');
   const [batteryCapacityInput, setBatteryCapacityInput] = useState('100');
+  const [isLoadingProgress, setIsLoadingProgress] = useState(false);
+  const [progressLoaded, setProgressLoaded] = useState(false);
+
+  // Get state and actions from context
+  const { 
+    selectedRobot, 
+    renderer, 
+    setRobotTask,
+    setRobotCapabilities,
+    addRobotAtPosition,
+  } = useRobots();
+  
 
   // Function to get map path from URL query param or default, using the maps state
   const getMapPathFromQuery = useCallback((currentMaps) => {
@@ -64,10 +72,10 @@ const MarsRoverPage = () => {
   // Initialize state from query param, using the directly initialized maps state
   const [selectedMapPath, setSelectedMapPath] = useState(() => getMapPathFromQuery(maps));
 
+
   // Use state and callback refs instead of useRef
   const [firstPersonViewElement, setFirstPersonViewElement] = useState(null);
   const [radarViewElement, setRadarViewElement] = useState(null);
-
   // Callback refs to capture the DOM elements
   const firstPersonViewRefCallback = useCallback(node => {
     if (node !== null) {
@@ -81,15 +89,7 @@ const MarsRoverPage = () => {
     }
   }, []);
 
-  // Get state and actions from context
-  const { 
-    selectedRobot, 
-    renderer, 
-    setRobotTask,
-    setRobotCapabilities
-  } = useRobots();
 
-  // Effect to set up the robot view renderers once the main renderer AND elements are available
   useEffect(() => {
     // Wait until renderer and elements are available
     if (!renderer || !firstPersonViewElement || !radarViewElement) {
@@ -110,10 +110,10 @@ const MarsRoverPage = () => {
          renderer.handleResize();
          // Also trigger resize after a slight delay to catch layout adjustments
          resizeTimer = setTimeout(() => {
-           // Check again in case renderer became null during the timeout
-           if (renderer && renderer.handleResize) {
-             renderer.handleResize();
-           }
+            // Check again in case renderer became null during the timeout
+            if (renderer && renderer.handleResize) {
+              renderer.handleResize();
+            }
          }, 500);
       } else {
         console.warn('Renderer does not have handleResize method during setup.');
@@ -130,6 +130,7 @@ const MarsRoverPage = () => {
     };
     // Depend on renderer and the elements themselves
   }, [renderer, firstPersonViewElement, radarViewElement]);
+
 
   // Effect to handle ongoing window resizing for the renderers (no change needed here)
   useEffect(() => {
@@ -178,7 +179,7 @@ const MarsRoverPage = () => {
     }
     // Only run this effect when the selected robot ID changes, not on every capability update
   }, [selectedRobot?.id]); 
-  
+
   // Handle behavior selection - now directly sets the task
   const handleBehaviorSelect = (behavior, params = {}) => {
     if (selectedRobot) {
@@ -246,230 +247,312 @@ const MarsRoverPage = () => {
     const percentage = Math.round((level / (capacity || 100)) * 100);
     return `${Math.round(level)}/${capacity || 100} (${percentage}%)`;
   };
+
+
+  // Effect to load saved progress when the component mounts
+  useEffect(() => {
+    const loadSavedProgress = async () => {
+      if (localStorage.getItem("progressFetched") === "true") {
+        console.log("Progress already fetched, skipping load.");
+        return;
+      } else {
+        console.log("Progress not fetched yet, loading...");
+      }
+
+      const missionRestarted = localStorage.getItem("missionRestarted") === "true";
+      if (missionRestarted) {
+        localStorage.removeItem("missionRestarted");
+        return;
+      } else {
+        console.log("Mission not restarted, proceeding with progress load.");
+      }
+
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.log("No token found, skipping progress load");
+          setProgressLoaded(true);
+          return;
+        }
+        setIsLoadingProgress(true);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const API_URL = import.meta.env.VITE_API_URL;
+        const response = await axios.get(`${API_URL}/api/progress`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (response.data && response.data.length > 0) {
+          console.log("Found saved progress:", response.data);
+          localStorage.setItem("progressFetched", "true");
+          if (renderer && renderer.robotManager) {
+            const currentRobotIds = Object.keys(renderer.robotManager._robots || {});
+            currentRobotIds.forEach(robotId => renderer.robotManager.removeRobot(robotId));
+          }
+          response.data.forEach(progress => {
+            addRobotAtPosition(progress.position.x, progress.position.z);
+            const robotIds = Object.keys(renderer.robotManager?._robots || {});
+            const latestRobotId = robotIds[robotIds.length - 1];
+            if (latestRobotId) {
+              setRobotCapabilities(latestRobotId, progress.capabilities || { maxSpeed: 0.5, sensorRange: 100, turnRate: 0.05, batteryCapacity: 100, batteryLevel: 100 });
+              setRobotTask(latestRobotId, progress.behaviorGoal || 'random');
+            }
+          });
+          console.log("Restored robots from saved progress");
+        } else {
+          console.log("No saved progress found");
+        }
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          console.log("No saved progress found");
+        } else {
+          console.error("Error loading saved progress:", error);
+        }
+      } finally {
+        setIsLoadingProgress(false);
+        setProgressLoaded(true);
+      }
+    };
+
+    if (renderer && !progressLoaded) {
+      loadSavedProgress();
+    }
+  }, [renderer, progressLoaded]);
+
   
   return (
     <div className="mars-rover-page">
-      <div className="terrain-panel">
-        {/* Pass selectedMapPath to MapView */}
-        <MapView mapPath={selectedMapPath} />
-        {/* Add Map Selection Dropdown */}
-        <div className="map-selector-container">
-          <label htmlFor="map-select">Select Terrain Map:</label>
-          <select 
-            id="map-select" 
-            value={selectedMapPath} 
-            onChange={handleMapChange}
-            className="map-select-dropdown"
-            disabled={maps.length === 0} // Disable if maps haven't loaded
-          >
-            {maps.length === 0 ? (
-              <option>Loading maps...</option>
-            ) : (
-              maps.map(map => (
-                <option key={map.path} value={map.path}>
-                  {map.name}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-      </div>
-      
-      <div className="info-panel">
-        {selectedRobot ? (
-          <>
-            <div className="robot-details">
-              <h2>Robot Details</h2>
-              <div className="detail-content">
-                <p><span>ID:</span> {selectedRobot.id.substring(0, 8)}</p>
-                <p><span>Position:</span> X: {selectedRobot.position.x.toFixed(2)}, 
-                                  Z: {selectedRobot.position.z.toFixed(2)}</p>
-                <p><span>Height:</span> {selectedRobot.height ? Math.max(0, selectedRobot.height).toFixed(0) : '20'}m</p>
-                <p><span>Coordinates:</span> {selectedRobot.coordinates ? 
-                  `${selectedRobot.coordinates.x.toFixed(2)}, ${selectedRobot.coordinates.z.toFixed(2)}` : 
-                  'N/A'}</p>
-                <p><span>Task:</span> {selectedRobot.behaviorGoal || 'random'}</p>
-                <p><span>Current Speed:</span> {selectedRobot.speed ? selectedRobot.speed.toFixed(2) : '0.00'}</p>
-                {selectedRobot.capabilities && (
-                  <>
-                    <p><span>Max Speed:</span> {selectedRobot.capabilities.maxSpeed?.toFixed(2) || '0.50'}</p>
-                    <p><span>Turn Rate:</span> {selectedRobot.capabilities.turnRate?.toFixed(2) || '0.05'}</p>
-                    <p><span>Sensor Range:</span> {selectedRobot.capabilities.sensorRange?.toFixed(0) || '100'}</p>
-                    <p><span>Battery:</span> {formatBatteryLevel(
-                      selectedRobot.capabilities.batteryLevel, 
-                      selectedRobot.capabilities.batteryCapacity
-                    )}</p>
-                    <button 
-                      className="reset-battery-btn"
-                      onClick={handleResetBattery}
-                      disabled={selectedRobot.capabilities.batteryLevel >= selectedRobot.capabilities.batteryCapacity}
-                    >
-                      Reset Battery
-                    </button>
-                  </>
-                )}
-              </div>
+      <MarsNavbar />
+      <div className="page-content">
+        <div className="terrain-panel">
+          <MapView mapPath={selectedMapPath} />
+          <div className="map-selector-container">
+            <label htmlFor="map-select">Select Terrain Map:</label>
+            <select 
+              id="map-select" 
+              value={selectedMapPath} 
+              onChange={handleMapChange}
+              className="map-select-dropdown"
+              disabled={maps.length === 0}
+            >
+              {maps.length === 0 ? (
+                <option>Loading maps...</option>
+              ) : (
+                maps.map(map => (
+                  <option key={map.path} value={map.path}>
+                    {map.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          {isLoadingProgress && (
+            <div className="loading-progress">
+              <div className="loading-spinner"></div>
+              <p>Loading your saved progress...</p>
             </div>
-            
-            <div className="robot-views">
-              <div className="view-container">
-                <h3>First Person View</h3>
-                <div
-                  className="first-person-view"
-                  ref={firstPersonViewRefCallback} // Use callback ref
-                >
-                  {/* The 3D renderer will be attached here */}
-                  <div className="view-label">
-                    Robot: {selectedRobot.id.substring(0, 8)} - Facing: {
-                      selectedRobot.direction ? 
-                      `X:${selectedRobot.direction.x.toFixed(2)}, Z:${selectedRobot.direction.z.toFixed(2)}` :
-                      'N/A'
-                    }
+          )}
+        </div>
+        
+        <div className="info-panel">
+          {selectedRobot ? (
+            <>
+              <div className="robot-details">
+                <h2>Robot Details</h2>
+                <div className="detail-content">
+                  <p><span>ID:</span> {selectedRobot.id.substring(0, 8)}</p>
+                  <p><span>Position:</span> X: {selectedRobot.position.x.toFixed(2)}, 
+                                    Z: {selectedRobot.position.z.toFixed(2)}</p>
+                  <p><span>Height:</span> {selectedRobot.height ? Math.max(0, selectedRobot.height).toFixed(0) : '20'}m</p>
+                  <p><span>Coordinates:</span> {selectedRobot.coordinates ? 
+                    `${selectedRobot.coordinates.x.toFixed(2)}, ${selectedRobot.coordinates.z.toFixed(2)}` : 
+                    'N/A'}</p>
+                  <p><span>Task:</span> {selectedRobot.behaviorGoal || 'random'}</p>
+                  <p><span>Current Speed:</span> {selectedRobot.speed ? selectedRobot.speed.toFixed(2) : '0.00'}</p>
+                  {selectedRobot.capabilities && (
+                    <>
+                      <p><span>Max Speed:</span> {selectedRobot.capabilities.maxSpeed?.toFixed(2) || '0.50'}</p>
+                      <p><span>Turn Rate:</span> {selectedRobot.capabilities.turnRate?.toFixed(2) || '0.05'}</p>
+                      <p><span>Sensor Range:</span> {selectedRobot.capabilities.sensorRange?.toFixed(0) || '100'}</p>
+                      <p><span>Battery:</span> {formatBatteryLevel(
+                        selectedRobot.capabilities.batteryLevel, 
+                        selectedRobot.capabilities.batteryCapacity
+                      )}</p>
+                      <button 
+                        className="reset-battery-btn"
+                        onClick={handleResetBattery}
+                        disabled={selectedRobot.capabilities.batteryLevel >= selectedRobot.capabilities.batteryCapacity}
+                      >
+                        Reset Battery
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              <div className="robot-views">
+                <div className="view-container">
+                  <h3>First Person View</h3>
+                  <div
+                    className="first-person-view"
+                    ref={firstPersonViewRefCallback}
+                  >
+                    <div className="view-label">
+                      Robot: {selectedRobot.id.substring(0, 8)} - Facing: {
+                        selectedRobot.direction ? 
+                        `X:${selectedRobot.direction.x.toFixed(2)}, Z:${selectedRobot.direction.z.toFixed(2)}` :
+                        'N/A'
+                      }
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="view-container">
+                  <h3>Radar View</h3>
+                  <div
+                    className="radar-view"
+                    ref={radarViewRefCallback}
+                  >
+                    <div className="view-label">
+                      Overhead view - {selectedRobot.coordinates ? 
+                        `Pos: ${selectedRobot.coordinates.x.toFixed(0)}, ${selectedRobot.coordinates.z.toFixed(0)}` : 
+                        'N/A'}
+                    </div>
                   </div>
                 </div>
               </div>
               
-              <div className="view-container">
-                <h3>Radar View</h3>
-                <div
-                  className="radar-view"
-                  ref={radarViewRefCallback} // Use callback ref
-                >
-                  {/* The 3D renderer will be attached here */}
-                  <div className="view-label">
-                    Overhead view - {selectedRobot.coordinates ? 
-                      `Pos: ${selectedRobot.coordinates.x.toFixed(0)}, ${selectedRobot.coordinates.z.toFixed(0)}` : 
-                      'N/A'}
+              <div className="control-panel">
+                <div className="behavior-controls">
+                  <h3>Robot Control</h3>
+                  <div className="behavior-buttons">
+                    <button 
+                      className={`behavior-button ${selectedRobot.behaviorGoal === 'random' ? 'active' : ''}`}
+                      onClick={() => handleBehaviorSelect('random')}
+                    >
+                      Random
+                    </button>
+                    <button 
+                      className={`behavior-button ${selectedRobot.behaviorGoal === 'patrol' ? 'active' : ''}`}
+                      onClick={() => handleBehaviorSelect('patrol')}
+                    >
+                      Patrol
+                    </button>
+                    <button 
+                      className={`behavior-button ${selectedRobot.behaviorGoal === 'findRocks' ? 'active' : ''}`}
+                      onClick={() => handleBehaviorSelect('findRocks')}
+                    >
+                      Find Rocks
+                    </button>
+                    <button 
+                      className={`behavior-button ${selectedRobot.behaviorGoal === 'standby' ? 'active' : ''}`}
+                      onClick={() => handleBehaviorSelect('standby')}
+                    >
+                      Stop
+                    </button>
+                  </div>
+                  
+                  <div className="capability-controls">
+                    <div className="speed-control">
+                      <label htmlFor="speed-input">Speed (m/s):</label>
+                      <input
+                        id="speed-input"
+                        type="number"
+                        min="0.1"
+                        max="10.0"
+                        step="0.1"
+                        value={speedInput}
+                        onChange={(e) => setSpeedInput(e.target.value)}
+                        className="capacity-input"
+                      />
+                      <button 
+                        className="apply-capacity"
+                        onClick={handleSpeedUpdate}
+                        disabled={!speedInput}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    
+                    <div className="capacity-control">
+                      <label htmlFor="sensor-range-input">Sensor Range (m):</label>
+                      <input
+                        id="sensor-range-input"
+                        type="number"
+                        min="10"
+                        max="500"
+                        step="10"
+                        value={sensorRangeInput}
+                        onChange={(e) => setSensorRangeInput(e.target.value)}
+                        className="capacity-input"
+                      />
+                      <button 
+                        className="apply-capacity"
+                        onClick={handleSensorRangeUpdate}
+                        disabled={!sensorRangeInput}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    
+                    <div className="capacity-control">
+                      <label htmlFor="turn-rate-input">Turn Rate (rad/s):</label>
+                      <input
+                        id="turn-rate-input"
+                        type="number"
+                        min="0.01"
+                        max="1.0"
+                        step="0.01"
+                        value={turnRateInput}
+                        onChange={(e) => setTurnRateInput(e.target.value)}
+                        className="capacity-input"
+                      />
+                      <button 
+                        className="apply-capacity"
+                        onClick={handleTurnRateUpdate}
+                        disabled={!turnRateInput}
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    
+                    <div className="capacity-control">
+                      <label htmlFor="battery-capacity-input">Battery (units):</label>
+                      <input
+                        id="battery-capacity-input"
+                        type="number"
+                        min="50"
+                        max="500"
+                        step="10"
+                        value={batteryCapacityInput}
+                        onChange={(e) => setBatteryCapacityInput(e.target.value)}
+                        className="capacity-input"
+                      />
+                      <button 
+                        className="apply-capacity"
+                        onClick={handleBatteryCapacityUpdate}
+                        disabled={!batteryCapacityInput}
+                      >
+                        Apply
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="control-panel">
-              <div className="behavior-controls">
-                <h3>Robot Control</h3>
-                <div className="behavior-buttons">
-                  <button 
-                    className={`behavior-button ${selectedRobot.behaviorGoal === 'random' ? 'active' : ''}`}
-                    onClick={() => handleBehaviorSelect('random')}
-                  >
-                    Random
-                  </button>
-                  <button 
-                    className={`behavior-button ${selectedRobot.behaviorGoal === 'patrol' ? 'active' : ''}`}
-                    onClick={() => handleBehaviorSelect('patrol')}
-                  >
-                    Patrol
-                  </button>
-                  <button 
-                    className={`behavior-button ${selectedRobot.behaviorGoal === 'findRocks' ? 'active' : ''}`}
-                    onClick={() => handleBehaviorSelect('findRocks')}
-                  >
-                    Find Rocks
-                  </button>
-                  <button 
-                    className={`behavior-button ${selectedRobot.behaviorGoal === 'standby' ? 'active' : ''}`}
-                    onClick={() => handleBehaviorSelect('standby')}
-                  >
-                    Stop
-                  </button>
-                </div>
-                
-                <div className="capability-controls">
-                  <div className="speed-control">
-                    <label htmlFor="speed-input">Speed (m/s):</label>
-                    <input
-                      id="speed-input"
-                      type="number"
-                      min="0.1"
-                      max="10.0"  // Updated max
-                      step="0.1"
-                      value={speedInput}
-                      onChange={(e) => setSpeedInput(e.target.value)}
-                      className="capacity-input"
-                    />
-                    <button 
-                      className="apply-capacity"
-                      onClick={handleSpeedUpdate}
-                      disabled={!speedInput}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  
-                  <div className="capacity-control">
-                    <label htmlFor="sensor-range-input">Sensor Range (m):</label>
-                    <input
-                      id="sensor-range-input"
-                      type="number"
-                      min="10"
-                      max="500" // Range already correct
-                      step="10"
-                      value={sensorRangeInput}
-                      onChange={(e) => setSensorRangeInput(e.target.value)}
-                      className="capacity-input"
-                    />
-                    <button 
-                      className="apply-capacity"
-                      onClick={handleSensorRangeUpdate}
-                      disabled={!sensorRangeInput}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  
-                  <div className="capacity-control">
-                    <label htmlFor="turn-rate-input">Turn Rate (rad/s):</label>
-                    <input
-                      id="turn-rate-input"
-                      type="number"
-                      min="0.01"
-                      max="1.0" // Updated max
-                      step="0.01"
-                      value={turnRateInput}
-                      onChange={(e) => setTurnRateInput(e.target.value)}
-                      className="capacity-input"
-                    />
-                    <button 
-                      className="apply-capacity"
-                      onClick={handleTurnRateUpdate}
-                      disabled={!turnRateInput}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  
-                  <div className="capacity-control">
-                    <label htmlFor="battery-capacity-input">Battery (units):</label>
-                    <input
-                      id="battery-capacity-input"
-                      type="number"
-                      min="50"
-                      max="500" // Range already correct
-                      step="10"
-                      value={batteryCapacityInput}
-                      onChange={(e) => setBatteryCapacityInput(e.target.value)}
-                      className="capacity-input"
-                    />
-                    <button 
-                      className="apply-capacity"
-                      onClick={handleBatteryCapacityUpdate}
-                      disabled={!batteryCapacityInput}
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
+            </>
+          ) : (
+            <div className="no-selection-view">
+              <div className="no-selection-message">
+                <h2>No Robot Selected</h2>
+                <p>Click on a robot on the map to view details and control it.</p>
+                <p>If there are no robots yet, click on the map to add one.</p>
               </div>
             </div>
-          </>
-        ) : (
-          <div className="no-selection-view">
-            <div className="no-selection-message">
-              <h2>No Robot Selected</h2>
-              <p>Click on a robot on the map to view details and control it.</p>
-              <p>If there are no robots yet, click on the map to add one.</p>
-            </div>
+          )}
+        </div>
+        
+        {missionRestarted && (
+          <div className="mission-restarted-notification">
+            <p>Mission has been restarted. All robots have been reset.</p>
           </div>
         )}
       </div>
