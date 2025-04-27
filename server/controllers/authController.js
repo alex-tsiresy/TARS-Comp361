@@ -1,4 +1,3 @@
-
 const Member = require("../models/Member");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
