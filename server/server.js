@@ -12,6 +12,11 @@ const progressRoutes = require("./routes/progressRoutes");
 const PORT = process.env.PORT || 5005;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
+app.use("/", (req, res) => {
+  res.send("Welcome to the Mars Rover API");
+}
+);
+
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {
