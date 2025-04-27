@@ -26,7 +26,7 @@ const connectDB = async () => {
 }; connectDB();
 
 const corsOptions = {
-  origin: ["https://tars-mars-rover.vercel.app/", "http://localhost:5173"],
+  origin: ["https://tars-mars-rover.vercel.app", "http://localhost:5173"],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true, 
 };
