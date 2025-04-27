@@ -2,15 +2,13 @@ require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const serverless   = require('serverless-http');
 
 const app = express();
 const authRoutes = require("./routes/authRoutes");
 const imageRoutes = require("./routes/imageRoutes");
 const progressRoutes = require("./routes/progressRoutes");
 
-// Start the server
-const PORT = process.env.PORT || 5005;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 app.use("/", (req, res) => {
   res.send("Welcome to the Mars Rover API");
@@ -45,3 +43,4 @@ app.use("/api/auth", authRoutes);
 app.use("/api/terrain-images", imageRoutes);
 app.use("/api/progress", progressRoutes);
 
+module.exports = serverless(app);
