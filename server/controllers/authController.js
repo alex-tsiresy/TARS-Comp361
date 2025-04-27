@@ -52,6 +52,7 @@ const registerMember = async (req, res) => {
 
 // Login member
 const loginMember = async (req, res) => {
+  console.log("Received", req.method, "request at /api/auth/login");
   try {
     const { username, password } = req.body;
 
