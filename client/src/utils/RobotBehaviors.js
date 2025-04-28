@@ -172,69 +172,62 @@ class RobotBehaviors {
   
   // Find rocks behavior
   applyFindRocksBehavior(robot, deltaTime) {
-    // Check if we have a target rock position
+    // Get the terrain object manager from the robot manager
+    const objectManager = this.robotManager.terrainRenderer.objectManager;
+    
+    // If we don't have a target rock, find the closest one
     if (!robot.behaviorState.targetPosition) {
-      // If we need to think, find a potential rock location
-      if (robot.behaviorState.thinkTime > 600) { // Reduced from 1000ms to 600ms for quicker decisions
-        robot.behaviorState.thinkTime = 0;
+      // Get all rocks from the object manager
+      const rocks = objectManager.objects.filter(obj => 
+        obj.geometry instanceof THREE.SphereGeometry && 
+        obj !== robot.mesh // Exclude the robot itself
+      );
+      
+      if (rocks.length > 0) {
+        // Find the closest rock
+        let closestRock = null;
+        let minDistance = Infinity;
         
-        // Pick a more directed search pattern with larger steps
-        const currentAngle = Math.atan2(robot.direction.z, robot.direction.x);
+        for (const rock of rocks) {
+          const distance = this._distanceToTarget(robot, rock.position);
+          if (distance < minDistance) {
+            minDistance = distance;
+            closestRock = rock;
+          }
+        }
         
-        // Use smaller angle variations for more purposeful searching
-        const searchAngleVariation = (Math.random() * 2 - 1) * Math.PI / 3; // ±60 degrees
-        const searchAngle = currentAngle + searchAngleVariation;
-        
-        // Use longer search distances to cover more ground
-        const minDistance = robot.capabilities.sensorRange * 0.7; // Minimum distance
-        const maxDistance = robot.capabilities.sensorRange * 1.2; // Sometimes go beyond sensor range
-        const searchDistance = minDistance + Math.random() * (maxDistance - minDistance);
-        
-        robot.behaviorState.targetPosition = {
-          x: robot.position.x + Math.cos(searchAngle) * searchDistance,
-          z: robot.position.z + Math.sin(searchAngle) * searchDistance
-        };
-        
-        // Set a high travel speed for faster exploration
-        robot.targetSpeed = robot.capabilities.maxSpeed * 1.0; // Full speed to target
+        if (closestRock) {
+          // Set the target position to the rock's position
+          robot.behaviorState.targetPosition = {
+            x: closestRock.position.x,
+            z: closestRock.position.z
+          };
+          
+          // Set a high travel speed for faster exploration
+          robot.targetSpeed = robot.capabilities.maxSpeed * 1.0;
+        }
       } else {
-        // Even while "thinking", move more purposefully in current direction
-        // instead of wandering randomly
+        // No rocks found, move randomly to search
         robot.targetSpeed = robot.capabilities.maxSpeed * 0.8;
-        
-        // Move forward in current direction without random turns
-        robot.position.x += robot.direction.x * robot.speed * 1.1;
-        robot.position.z += robot.direction.z * robot.speed * 1.1;
+        this.applyRandomBehavior(robot, deltaTime);
       }
     } else {
-      // Move directly toward the target position with high speed
-      robot.targetSpeed = robot.capabilities.maxSpeed * 1.0; // Full speed
+      // Move toward the target rock with high speed
+      robot.targetSpeed = robot.capabilities.maxSpeed * 1.0;
       this.robotManager.movement.moveTowardPoint(robot, robot.behaviorState.targetPosition, deltaTime);
       
-      // Add extra momentum for more direct movement
-      robot.position.x += robot.direction.x * robot.speed * 0.1;
-      robot.position.z += robot.direction.z * robot.speed * 0.1;
-      
-      // Check if we've reached the target
+      // Check if we've reached the rock
       const distanceToTarget = this._distanceToTarget(robot, robot.behaviorState.targetPosition);
       
-      if (distanceToTarget < 10) {
-        // Simulate a chance of finding a rock
-        const foundRock = Math.random() < 0.3;
-        
-        if (foundRock) {
-          // Examine the rock, then continue - shorter examination time
-          robot.targetSpeed = 0;
-          setTimeout(() => {
-            if (robot && robot.behaviorGoal === 'findRocks') {
-              robot.behaviorState.targetPosition = null;
-              robot.targetSpeed = robot.capabilities.maxSpeed * 0.9; // Higher speed after finding rock
-            }
-          }, 500); // Reduced from 800ms to 500ms
-        } else {
-          // No rock found, continue searching immediately
-          robot.behaviorState.targetPosition = null;
-        }
+      if (distanceToTarget < 15) {
+        // Simulate examining the rock
+        robot.targetSpeed = 0;
+        setTimeout(() => {
+          if (robot && robot.behaviorGoal === 'findRocks') {
+            robot.behaviorState.targetPosition = null;
+            robot.targetSpeed = robot.capabilities.maxSpeed * 0.9;
+          }
+        }, 500);
       }
     }
   }
@@ -319,47 +312,46 @@ class RobotBehaviors {
   
   // Find flat surface behavior
   applyFindFlatSurfaceBehavior(robot, deltaTime) {
-    // Check if we have a target flat surface position
+    // Get the terrain renderer for height information
+    const terrainRenderer = this.robotManager.terrainRenderer;
+    
     if (!robot.behaviorState.targetPosition) {
       // If we need to think, find a potential flat area
-      if (robot.behaviorState.thinkTime > 450) { // Quick decisions for flat surface search
+      if (robot.behaviorState.thinkTime > 450) {
         robot.behaviorState.thinkTime = 0;
         
-        // Flat surfaces are more likely to be found in open areas
-        // Use a more methodical search pattern with grid-like movement
+        // Sample heights in a grid pattern around the robot
+        const sampleRadius = 100;
+        const samplePoints = 8;
+        let flattestPoint = null;
+        let flattestHeight = Infinity;
         
-        // Create a spiral search pattern
-        const spiralAngle = robot.behaviorState.searchIterations || 0;
-        const spiralRadius = 50 + (robot.behaviorState.searchIterations || 0) * 15;
-        
-        // Increment search iteration counter
-        robot.behaviorState.searchIterations = (robot.behaviorState.searchIterations || 0) + 1;
-        if (robot.behaviorState.searchIterations > 12) {
-          robot.behaviorState.searchIterations = 0; // Reset after completing a full search
+        for (let i = 0; i < samplePoints; i++) {
+          const angle = (i / samplePoints) * Math.PI * 2;
+          const x = robot.position.x + Math.cos(angle) * sampleRadius;
+          const z = robot.position.z + Math.sin(angle) * sampleRadius;
+          const height = terrainRenderer.getHeightAtPosition(x, z);
+          
+          // Check if this point is flatter than our current flattest
+          if (height < flattestHeight) {
+            flattestHeight = height;
+            flattestPoint = { x, z };
+          }
         }
         
-        // Calculate position in spiral pattern
-        robot.behaviorState.targetPosition = {
-          x: robot.position.x + Math.cos(spiralAngle) * spiralRadius,
-          z: robot.position.z + Math.sin(spiralAngle) * spiralRadius
-        };
-        
-        // Set efficient speed for methodical searching
-        robot.targetSpeed = robot.capabilities.maxSpeed * 0.9;
+        if (flattestPoint) {
+          robot.behaviorState.targetPosition = flattestPoint;
+          robot.targetSpeed = robot.capabilities.maxSpeed * 0.9;
+        } else {
+          // If no flat point found, move randomly
+          robot.targetSpeed = robot.capabilities.maxSpeed * 0.8;
+          this.applyRandomBehavior(robot, deltaTime);
+        }
       } else {
         // While "thinking", move in a straight line to efficiently cover ground
         robot.targetSpeed = robot.capabilities.maxSpeed * 0.8;
-        
-        // Move forward in current direction with slight scanning motion
-        const scanFactor = Math.sin(robot.behaviorState.thinkTime * 0.005) * 0.1;
         robot.position.x += robot.direction.x * robot.speed;
         robot.position.z += robot.direction.z * robot.speed;
-        
-        // Slightly adjust direction to scan the terrain
-        const currentAngle = Math.atan2(robot.direction.z, robot.direction.x);
-        const scanAngle = currentAngle + scanFactor;
-        robot.direction.x = Math.cos(scanAngle);
-        robot.direction.z = Math.sin(scanAngle);
       }
     } else {
       // Move toward the target position with high efficiency
@@ -371,28 +363,21 @@ class RobotBehaviors {
       
       if (distanceToTarget < 15) {
         // Simulate analyzing the surface
-        const foundFlatSurface = Math.random() < 0.4; // 40% chance to find suitable flat surface
+        const currentHeight = terrainRenderer.getHeightAtPosition(robot.position.x, robot.position.z);
+        const targetHeight = terrainRenderer.getHeightAtPosition(robot.behaviorState.targetPosition.x, robot.behaviorState.targetPosition.z);
         
-        if (foundFlatSurface) {
-          // Analyze the flat surface thoroughly
+        // If the height difference is small, we found a flat surface
+        if (Math.abs(currentHeight - targetHeight) < 5) {
           robot.targetSpeed = 0;
-          
-          // Simulate a scanning pattern
-          const scanDuration = 800; // Longer scan for detailed surface analysis
           setTimeout(() => {
             if (robot && robot.behaviorGoal === 'findFlatSurface') {
               robot.behaviorState.targetPosition = null;
               robot.targetSpeed = robot.capabilities.maxSpeed * 0.9;
             }
-          }, scanDuration);
+          }, 800);
         } else {
-          // Not flat enough, continue searching immediately
+          // Not flat enough, continue searching
           robot.behaviorState.targetPosition = null;
-          
-          // Reset search iterations occasionally to avoid getting stuck in a pattern
-          if (Math.random() < 0.3) {
-            robot.behaviorState.searchIterations = 0;
-          }
         }
       }
     }
