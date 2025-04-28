@@ -577,6 +577,9 @@ class RobotManager {
         case 'findRocks':
           robot.targetSpeed = robot.capabilities.maxSpeed * 0.8;
           break;
+        case 'findFlatSurface':
+          robot.targetSpeed = robot.capabilities.maxSpeed * 0.9;
+          break;
       }
       
       // Update UI if this is the selected robot

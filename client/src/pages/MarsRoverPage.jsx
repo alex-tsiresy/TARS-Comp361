@@ -444,6 +444,12 @@ const MarsRoverPage = () => {
                       Find Rocks
                     </button>
                     <button 
+                      className={`behavior-button ${selectedRobot.behaviorGoal === 'findFlatSurface' ? 'active' : ''}`}
+                      onClick={() => handleBehaviorSelect('findFlatSurface')}
+                    >
+                      Find Flat Surface
+                    </button>
+                    <button 
                       className={`behavior-button ${selectedRobot.behaviorGoal === 'standby' ? 'active' : ''}`}
                       onClick={() => handleBehaviorSelect('standby')}
                     >
