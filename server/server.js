@@ -26,9 +26,9 @@ const connectDB = async () => {
 }; connectDB();
 
 const corsOptions = {
-  origin: ["http://localhost:5173"],
+  origin: ["http://localhost:5173", "https://vercel.com/alexs-projects-75ac000b/tars-frontend/78jKCAbiSQ7WoUWGGU1qsw681gVq"],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true, 
+  credentials: true,
 };
 
 // Middleware
@@ -39,4 +39,3 @@ app.use(express.json());
 app.use("/api/auth", authRoutes); 
 app.use("/api/terrain-images", imageRoutes);
 app.use("/api/progress", progressRoutes);
-
