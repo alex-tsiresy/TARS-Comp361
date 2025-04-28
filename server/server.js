@@ -26,13 +26,13 @@ const connectDB = async () => {
 }; connectDB();
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "https://tars-frontend-xi.vercel.app/", "https://tars-mars-rover.vercel.app"],
+  origin: ["https://tars-mars-rover.vercel.app", "https://tars-frontend-xi.vercel.app"],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
 };
 
 // Middleware
-app.use(cors(corsOptions)); 
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes
