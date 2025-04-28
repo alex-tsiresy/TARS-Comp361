@@ -27,3 +27,4 @@ client/.env
 *.njsproj
 *.sln
 *.sw?
+.vercel
