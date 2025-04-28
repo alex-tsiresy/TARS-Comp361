@@ -26,7 +26,7 @@ const connectDB = async () => {
 }; connectDB();
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "https://vercel.com/alexs-projects-75ac000b/tars-frontend/78jKCAbiSQ7WoUWGGU1qsw681gVq"],
+  origin: ["http://localhost:5173", "https://tars-frontend-xi.vercel.app/"],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
 };
