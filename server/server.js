@@ -6,10 +6,16 @@ const cors = require("cors");
 const app = express();
 const authRoutes = require("./routes/authRoutes");
 const imageRoutes = require("./routes/imageRoutes");
+const progressRoutes = require("./routes/progressRoutes");
 
 // Start the server
 const PORT = process.env.PORT || 5005;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+app.use("/", (req, res) => {
+  res.send("Welcome to the Mars Rover API");
+}
+);
 
 const connectDB = async () => {
   try {
@@ -25,16 +31,18 @@ const connectDB = async () => {
 }; connectDB();
 
 const corsOptions = {
-  origin: ["http://localhost:5173"],
+  origin: ["https://tars-mars-rover.vercel.app", "http://localhost:5173"],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true, 
 };
 
 // Middleware
 app.use(cors(corsOptions)); 
-app.use(express.json()); 
+app.use(express.json());
+app.options("*", cors(corsOptions)); // Preflight request handling
 
 // Routes
 app.use("/api/auth", authRoutes); 
-app.use("/api/images", imageRoutes);
+app.use("/api/terrain-images", imageRoutes);
+app.use("/api/progress", progressRoutes);
 

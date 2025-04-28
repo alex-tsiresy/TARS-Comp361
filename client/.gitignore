@@ -13,9 +13,9 @@ dist-ssr
 *.local
 
 # Local Environment files
-#server/.env
-#client/.env
-#*.local
+server/.env
+client/.env
+*.local
 
 # Editor directories and files
 .vscode/*

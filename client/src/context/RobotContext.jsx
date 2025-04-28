@@ -43,6 +43,14 @@ function robotReducer(state, action) {
         draft.selectedRobotId = action.payload;
         break;
       
+      case actions.REMOVE_ROBOT:
+        delete draft.robots[action.payload];
+        // Optionally clear selectedRobotId if it matches the removed one:
+        if (draft.selectedRobotId === action.payload) {
+          draft.selectedRobotId = null;
+        }
+        break;
+      
       case actions.SET_ROBOT_TASK:
         if (draft.robots[action.payload.robotId]) {
           draft.robots[action.payload.robotId].task = action.payload.task;
@@ -110,6 +118,7 @@ export const RobotProvider = ({ children }) => {
       return '/out.png'; // Default map path
     };
 
+  
     // Listen for renderer initialization using BridgeService subscription
     const unsubscribeInitialized = bridgeService.subscribe('rendererInitialized', (renderer) => {
       dispatch({

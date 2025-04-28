@@ -321,15 +321,11 @@ class TerrainRenderer {
         // Process heightmap for height sampling
         this.processHeightmap(heightMap);
 
-        // Re-add grid helper and ambient objects if they were removed or need repositioning
-        // For now, assume they persist or are managed elsewhere. If issues arise,
-        // we might need to call objectManager.dispose() and re-add objects here.
-        // Example:
-        // if (this.objectManager) {
-        //   this.objectManager.dispose(); // Clear old objects
-        //   this.objectManager.addGridHelper();
-        //   this.objectManager.addAmbientObjects();
-        // }
+        if (this.objectManager) {
+          this.objectManager.dispose(); // Clear old objects
+          this.objectManager.addGridHelper();
+          this.objectManager.addAmbientObjects();
+        }
 
         console.log(`Terrain loaded successfully with map: ${heightMapPath}`);
 

@@ -1,43 +1,66 @@
-const Progress = require("../models/Progress");
+const Progress = require("../models/UserProgress");
 
-// Save (or update) a user's progress
 const saveProgress = async (req, res) => {
   try {
-    
-    const progressData = {
-      user: req.body.user,
-      robotId: req.body.robotId,
-      position: req.body.position,
-      height: req.body.height,
-      coordinates: req.body.coordinates,
-      behaviorGoal: req.body.behaviorGoal,
-      speed: req.body.speed,
-      capabilities: req.body.capabilities,
-      updatedAt: new Date(),
-    };
+    // Get user ID from the authenticated request
+    const userId = req.user.id;
 
-    let progress = await Progress.findOne({ user: req.body.user, robotId: req.body.robotId });
-    if (progress) {   // Update existing progress otherwise create a new one
-      progress = await Progress.findOneAndUpdate(
-        { user: req.body.user, robotId: req.body.robotId },
-        progressData,
-        { new: true }
-      );
+    // Check if we're receiving an array of progress objects
+    if (Array.isArray(req.body.progress)) {
+      const progressArray = req.body.progress;
+
+      // Optionally delete all previous progress first
+      await Progress.deleteMany({ user: userId });
+
+      // Loop over each progress object, add the user field, and save it
+      const savedProgresses = [];
+      for (const progressItem of progressArray) {
+        // Validate that required fields exist
+        if (!progressItem.robotId || !progressItem.position || 
+            progressItem.position.x === undefined || progressItem.position.z === undefined) {
+          return res.status(400).json({ message: "One or more progress objects are missing required fields." });
+        }
+        // Attach the user ID
+        progressItem.user = userId;
+        progressItem.updatedAt = new Date();
+        const savedItem = await Progress.create(progressItem);
+        savedProgresses.push(savedItem);
+      }
+
+      return res.status(200).json({ message: "Progress saved successfully.", progress: savedProgresses });
     } else {
-      progress = new Progress(progressData);
+      // Fallback to the object-based approach (if needed)
+      const progressData = {
+        user: userId,
+        robotId: req.body.robotId,
+        position: req.body.position,
+        height: req.body.height,
+        coordinates: req.body.coordinates,
+        behaviorGoal: req.body.behaviorGoal,
+        speed: req.body.speed,
+        capabilities: req.body.capabilities,
+        updatedAt: new Date(),
+      };
+
+      // Delete all existing progress for this user
+      await Progress.deleteMany({ user: userId });
+      
+      // Create and save the new progress
+      const progress = new Progress(progressData);
       await progress.save();
+
+      return res.status(200).json({ message: "Progress saved successfully.", progress });
     }
-    res.status(200).json({ message: "Progress saved successfully.", progress });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error while saving progress." });
   }
 };
 
-// Get progress for a specific user 
 const getProgress = async (req, res) => {
   try {
-    const { userId, robotId } = req.query;
+    const userId = req.user.id;
+    const { robotId } = req.query;
     const query = { user: userId };
     if (robotId) {
       query.robotId = robotId;
@@ -53,4 +76,15 @@ const getProgress = async (req, res) => {
   }
 };
 
-model.exports = { saveProgress, getProgress };
+const deleteProgress = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    await Progress.deleteMany({ user: userId });
+    res.status(200).json({ message: "Progress deleted successfully." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error while deleting progress." });
+  }
+};
+
+module.exports = { saveProgress, getProgress, deleteProgress };

@@ -12,13 +12,14 @@ function InfoPage() {
                 <div className="status-indicator"></div>
                 MISSION STATUS: ACTIVE
             </div>
-            
+                
+
             <div className="info-header">
+                <h1 className="title">MARS ROVERS CONTROL MANUAL</h1>
                 <button className="control-button back-button" onClick={() => navigate("/")}>
                     <span className="button-icon">⏴</span>
                     <span className="button-text">RETURN TO BASE</span>
                 </button>
-                <h1 className="title">MARS ROVERS CONTROL MANUAL</h1>
             </div>
 
             <div className="info-content">

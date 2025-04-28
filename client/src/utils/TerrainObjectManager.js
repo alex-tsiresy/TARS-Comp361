@@ -23,8 +23,6 @@ class TerrainObjectManager {
     // Add rocks scattered around the terrain
     this.addRocks(5);
     
-    // Add beacons at cardinal directions for orientation
-    this.addDirectionalBeacons();
   }
   
   addCentralPlatform() {

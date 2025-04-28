@@ -258,6 +258,27 @@ class BridgeService {
     this._pendingOperations.push(() => this.setRobotCapabilities(robotId, capabilities));
     return false;
   }
+
+  notifyRobotRemoved(robotId) {
+    // If context is registered, update it directly.
+    if (this._contextDispatch && this._contextActions) {
+      this._contextDispatch({
+        type: this._contextActions.REMOVE_ROBOT, // Make sure REMOVE_ROBOT is defined in your actions.
+        payload: robotId
+      });
+    }
+    
+    // Notify direct subscribers.
+    this._notifySubscribers('robotRemoved', { robotId });
+    
+    // For backward compatibility, dispatch a DOM event if needed.
+    if (!this._migratedToDirectMode) {
+      const event = new CustomEvent('robotRemoved', {
+        detail: { robotId }
+      });
+      window.dispatchEvent(event);
+    }
+  }
 }
 
 // Create a singleton instance
